@@ -1,0 +1,51 @@
+// src/components/Card.tsx — Premium card with shadow variants
+import React, { ReactNode } from 'react';
+import { StyleSheet, View, ViewStyle, TouchableOpacity } from 'react-native';
+import { Theme } from '../styles/theme';
+
+interface CardProps {
+  children: ReactNode;
+  style?: ViewStyle;
+  elevation?: 'sm' | 'md' | 'lg';
+  onPress?: () => void;
+  testID?: string;
+}
+
+export default function Card({
+  children,
+  style,
+  elevation = 'md',
+  onPress,
+  testID,
+}: CardProps) {
+  const shadowStyle = Theme.shadows[elevation];
+  const cardStyle = [styles.card, shadowStyle, style];
+
+  if (onPress) {
+    return (
+      <TouchableOpacity
+        testID={testID}
+        style={cardStyle}
+        onPress={onPress}
+        activeOpacity={0.85}
+      >
+        {children}
+      </TouchableOpacity>
+    );
+  }
+
+  return (
+    <View testID={testID} style={cardStyle}>
+      {children}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: Theme.colors.surface,
+    borderRadius: Theme.radius.md,
+    padding: Theme.spacing.lg,
+    marginVertical: Theme.spacing.sm,
+  },
+});
