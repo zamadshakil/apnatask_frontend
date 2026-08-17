@@ -7,22 +7,22 @@ import {
   FlatList,
   TextInput,
   TouchableOpacity,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import { ArrowLeft, Send, Banknote, Info, Wifi, WifiOff } from 'lucide-react-native';
 import { useAuth } from '../../navigation/AuthContext';
 import { Theme } from '../../styles/theme';
 import { NegotiationWebSocket } from '../../services/websocket';
 import ChatBubble from '../../components/ChatBubble';
 import BidCard from '../../components/BidCard';
-import Badge from '../../components/Badge';
 
 interface Message {
   id: string;
   type: 'chat' | 'bid' | 'accept';
-  sender_id: number;
+  sender_id: string;
   role: 'customer' | 'provider';
   message?: string;
   amount?: number;
@@ -60,7 +60,7 @@ export default function CustomerNegotiationScreen() {
           {
             id: Date.now().toString() + Math.random(),
             type: data.type,
-            sender_id: data.sender_id,
+            sender_id: String(data.sender_id),
             role: data.role,
             message: data.message,
             amount: data.amount,
@@ -92,7 +92,7 @@ export default function CustomerNegotiationScreen() {
     wsRef.current.send(msg);
     setMessages((prev) => [
       ...prev,
-      { ...msg, id: Date.now().toString(), amount: undefined, timestamp: formatTime() },
+      { ...msg, id: Date.now().toString(), sender_id: String(userId), amount: undefined, timestamp: formatTime() },
     ]);
     setInputText('');
   };
@@ -111,13 +111,13 @@ export default function CustomerNegotiationScreen() {
     wsRef.current.send(msg);
     setMessages((prev) => [
       ...prev,
-      { ...msg, id: Date.now().toString(), message: undefined, timestamp: formatTime() },
+      { ...msg, id: Date.now().toString(), sender_id: String(userId), message: undefined, timestamp: formatTime() },
     ]);
     setBidAmount('');
     setShowBidInput(false);
   };
 
-  const handleAcceptBid = (senderId: number, amount: number) => {
+  const handleAcceptBid = (providerId: string, amount: number) => {
     if (!wsRef.current || !userId) return;
 
     const msg = {
@@ -130,7 +130,7 @@ export default function CustomerNegotiationScreen() {
     wsRef.current.send(msg);
     setMessages((prev) => [
       ...prev,
-      { ...msg, id: Date.now().toString(), message: undefined, timestamp: formatTime() },
+      { ...msg, id: Date.now().toString(), sender_id: String(userId), message: undefined, timestamp: formatTime() },
     ]);
   };
 
@@ -146,7 +146,7 @@ export default function CustomerNegotiationScreen() {
               Bid of Rs. {item.amount?.toLocaleString()} accepted!
             </Text>
             <Text style={styles.systemSubtext}>
-              Escrow payment is being processed
+              Escrow payment is locked securely.
             </Text>
           </View>
         </View>
@@ -157,7 +157,7 @@ export default function CustomerNegotiationScreen() {
       return (
         <View style={styles.bidWrapper}>
           <BidCard
-            providerName={isMe ? 'You' : `Provider #${item.sender_id}`}
+            providerName={isMe ? 'You (Customer)' : `Provider #${item.sender_id.slice(0, 5)}`}
             amount={item.amount || 0}
             isOwnBid={isMe}
             timestamp={item.timestamp}
@@ -173,7 +173,7 @@ export default function CustomerNegotiationScreen() {
         isSent={isMe}
         message={item.message}
         timestamp={item.timestamp}
-        senderName={!isMe ? `Provider #${item.sender_id}` : undefined}
+        senderName={!isMe ? `Provider #${item.sender_id.slice(0, 5)}` : undefined}
       />
     );
   };
@@ -187,12 +187,16 @@ export default function CustomerNegotiationScreen() {
           style={styles.backBtn}
           activeOpacity={0.7}
         >
-          <Text style={styles.backText}>← Back</Text>
+          <ArrowLeft size={22} color={Theme.colors.textOnPrimary} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Booking #{bookingId}</Text>
           <View style={styles.connectionRow}>
-            <View style={[styles.connectionDot, isConnected ? styles.dotOnline : styles.dotOffline]} />
+            {isConnected ? (
+              <Wifi size={12} color={Theme.colors.accent} />
+            ) : (
+              <WifiOff size={12} color={Theme.colors.error} />
+            )}
             <Text style={styles.connectionText}>
               {isConnected ? 'Connected' : 'Disconnected'}
             </Text>
@@ -205,7 +209,6 @@ export default function CustomerNegotiationScreen() {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.chatArea}
-        keyboardVerticalOffset={0}
       >
         <View style={styles.chatBackground}>
           <FlatList
@@ -217,12 +220,12 @@ export default function CustomerNegotiationScreen() {
             onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
             ListEmptyComponent={
               <View style={styles.emptyChatContainer}>
-                <Text style={styles.emptyChatIcon}>💬</Text>
+                <Info size={40} color={Theme.colors.textTertiary} style={styles.emptyChatIcon} />
                 <Text style={styles.emptyChatText}>
                   Waiting for provider bids...
                 </Text>
                 <Text style={styles.emptyChatSubtext}>
-                  Providers will send their bids here. You can negotiate and accept.
+                  Interested local service providers will submit bids here. You can chat to negotiate and click "Accept Bid" once agreed.
                 </Text>
               </View>
             }
@@ -235,14 +238,14 @@ export default function CustomerNegotiationScreen() {
             <View style={styles.bidInputRow}>
               <TextInput
                 style={styles.bidInput}
-                placeholder="Counter-offer (PKR)"
+                placeholder="Counter-offer amount (PKR)"
                 keyboardType="numeric"
                 value={bidAmount}
                 onChangeText={setBidAmount}
                 placeholderTextColor={Theme.colors.textTertiary}
               />
               <TouchableOpacity style={styles.bidSendBtn} onPress={handleSendBid}>
-                <Text style={styles.bidSendText}>Send</Text>
+                <Text style={styles.bidSendText}>Offer</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.bidCancelBtn} onPress={() => setShowBidInput(false)}>
                 <Text style={styles.bidCancelText}>✕</Text>
@@ -255,7 +258,7 @@ export default function CustomerNegotiationScreen() {
               onPress={() => setShowBidInput(!showBidInput)}
               activeOpacity={0.7}
             >
-              <Text style={styles.bidToggleText}>₨</Text>
+              <Banknote size={20} color={Theme.colors.white} />
             </TouchableOpacity>
             <TextInput
               style={styles.chatInput}
@@ -271,7 +274,7 @@ export default function CustomerNegotiationScreen() {
               disabled={!inputText.trim()}
               activeOpacity={0.7}
             >
-              <Text style={styles.sendBtnText}>➤</Text>
+              <Send size={18} color={Theme.colors.white} />
             </TouchableOpacity>
           </View>
         </View>
@@ -290,22 +293,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: Theme.colors.primary,
     paddingHorizontal: Theme.spacing.lg,
-    paddingVertical: Theme.spacing.md,
+    paddingVertical: 12,
   },
   backBtn: {
-    width: 60,
-  },
-  backText: {
-    color: Theme.colors.textOnPrimary,
-    fontSize: 14,
-    fontWeight: '600',
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerCenter: {
     flex: 1,
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '700',
     color: Theme.colors.textOnPrimary,
   },
@@ -315,27 +316,17 @@ const styles = StyleSheet.create({
     gap: 4,
     marginTop: 2,
   },
-  connectionDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-  },
-  dotOnline: {
-    backgroundColor: Theme.colors.accent,
-  },
-  dotOffline: {
-    backgroundColor: Theme.colors.error,
-  },
   connectionText: {
     fontSize: 11,
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(255,255,255,0.75)',
+    fontWeight: '500',
   },
   chatArea: {
     flex: 1,
   },
   chatBackground: {
     flex: 1,
-    backgroundColor: Theme.colors.chatBackground,
+    backgroundColor: '#F5F6F8', // clean background instead of beige
   },
   messageList: {
     paddingVertical: Theme.spacing.md,
@@ -343,7 +334,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   bidWrapper: {
-    paddingHorizontal: Theme.spacing.md,
+    paddingHorizontal: Theme.spacing.xs,
     marginVertical: Theme.spacing.sm,
   },
   systemMessage: {
@@ -378,31 +369,31 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 80,
+    paddingVertical: 100,
     paddingHorizontal: Theme.spacing.xxl,
   },
   emptyChatIcon: {
-    fontSize: 48,
     marginBottom: Theme.spacing.md,
   },
   emptyChatText: {
-    ...Theme.typography.h3,
-    color: Theme.colors.textSecondary,
+    fontSize: 18,
+    fontWeight: '700',
+    color: Theme.colors.textPrimary,
     textAlign: 'center',
   },
   emptyChatSubtext: {
-    ...Theme.typography.bodySmall,
-    color: Theme.colors.textTertiary,
+    fontSize: 13,
+    color: Theme.colors.textSecondary,
     textAlign: 'center',
     marginTop: Theme.spacing.sm,
-    lineHeight: 20,
+    lineHeight: 18,
   },
   actionPanel: {
-    backgroundColor: Theme.colors.surface,
+    backgroundColor: Theme.colors.white,
     borderTopWidth: 1,
     borderTopColor: Theme.colors.borderLight,
     paddingHorizontal: Theme.spacing.md,
-    paddingVertical: Theme.spacing.sm,
+    paddingVertical: Theme.spacing.md,
   },
   bidInputRow: {
     flexDirection: 'row',
@@ -410,8 +401,10 @@ const styles = StyleSheet.create({
     backgroundColor: Theme.colors.warningLight,
     borderRadius: Theme.radius.md,
     paddingHorizontal: Theme.spacing.md,
-    marginBottom: Theme.spacing.sm,
+    marginBottom: Theme.spacing.md,
     gap: Theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: Theme.colors.warning,
   },
   bidInput: {
     flex: 1,
@@ -443,41 +436,34 @@ const styles = StyleSheet.create({
     gap: Theme.spacing.sm,
   },
   bidToggleBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: Theme.colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  bidToggleText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: Theme.colors.white,
+    ...Theme.shadows.sm,
   },
   chatInput: {
     flex: 1,
-    backgroundColor: Theme.colors.background,
+    backgroundColor: '#F5F6F8',
     borderRadius: Theme.radius.xl,
     paddingHorizontal: Theme.spacing.lg,
-    paddingVertical: 10,
+    paddingVertical: 12,
     fontSize: 16,
     color: Theme.colors.textPrimary,
     maxHeight: 100,
   },
   sendBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: Theme.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    ...Theme.shadows.sm,
   },
   sendBtnDisabled: {
     backgroundColor: Theme.colors.textTertiary,
-  },
-  sendBtnText: {
-    fontSize: 18,
-    color: Theme.colors.white,
   },
 });

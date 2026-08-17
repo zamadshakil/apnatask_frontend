@@ -15,6 +15,7 @@ import { useAuth } from '../../navigation/AuthContext';
 import Card from '../../components/Card';
 import Badge from '../../components/Badge';
 import api from '../../services/api';
+import { Calendar, Banknote, HelpCircle, ArrowRight, MessageSquareDashed, Clock, ChevronRight } from 'lucide-react-native';
 
 interface Booking {
   id: number;
@@ -27,7 +28,7 @@ interface Booking {
   createdAt?: string;
 }
 
-// Mock data for development — will be replaced with real API data
+// Mock data for development
 const mockBookings: Booking[] = [
   {
     id: 101,
@@ -51,7 +52,7 @@ const mockBookings: Booking[] = [
   },
   {
     id: 103,
-    category: 'Electrician',
+    category: 'Electrical',
     description: 'Install 4 new switches and rewire living room circuit.',
     budget: 3000,
     status: 'accepted',
@@ -61,28 +62,59 @@ const mockBookings: Booking[] = [
   },
 ];
 
-const statusConfig: Record<string, { variant: 'success' | 'warning' | 'info' | 'neutral'; label: string }> = {
-  bidding: { variant: 'warning', label: 'Bidding Active' },
+const statusConfig: Record<string, { variant: 'success' | 'warning' | 'info' | 'neutral' | 'error'; label: string }> = {
+  bidding: { variant: 'warning', label: 'Bids Pending' },
   negotiation: { variant: 'info', label: 'Negotiating' },
-  accepted: { variant: 'success', label: 'Accepted' },
+  accepted: { variant: 'success', label: 'Offer Accepted' },
   pending: { variant: 'neutral', label: 'Pending' },
   completed: { variant: 'success', label: 'Completed' },
-  canceled: { variant: 'error' as any, label: 'Canceled' },
+  canceled: { variant: 'error', label: 'Canceled' },
 };
 
 export default function ActiveBookingsScreen() {
   const navigation = useNavigation<any>();
+  const { userId } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>(mockBookings);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    // In production, fetch from API
-    setTimeout(() => {
+  const fetchBookings = useCallback(async (showLoading = false) => {
+    if (showLoading) setLoading(true);
+    try {
+      // Fetch bookings from real backend API if running
+      // Since it's a customer, we can fetch their active bookings.
+      // But we fallback to our mock data if not running/connected.
+      const response = await api.get('/bookings');
+      if (response.data && response.data.length > 0) {
+        setBookings(response.data.map((b: any) => ({
+          id: b.id,
+          category: b.category || 'General Task',
+          description: b.description || 'Request details...',
+          budget: b.amount || 0,
+          status: b.status || 'pending',
+          bidsCount: b.bids_count || 0,
+          topBid: b.top_bid || undefined,
+          createdAt: 'Recently',
+        })));
+      } else {
+        setBookings(mockBookings);
+      }
+    } catch (err: any) {
+      setBookings(mockBookings);
+    } finally {
+      setLoading(false);
       setRefreshing(false);
-    }, 1000);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchBookings(true);
+  }, [fetchBookings]);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchBookings();
+  };
 
   const handleBookingPress = (booking: Booking) => {
     navigation.navigate('CustomerNegotiationScreen', { bookingId: booking.id });
@@ -92,35 +124,39 @@ export default function ActiveBookingsScreen() {
     const status = statusConfig[item.status] || statusConfig.pending;
 
     return (
-      <Card elevation="md" onPress={() => handleBookingPress(item)}>
-        {/* Top Row — Category & Status */}
-        <View style={styles.cardTopRow}>
-          <View style={styles.categoryBadge}>
-            <Text style={styles.categoryText}>{item.category}</Text>
+      <Card elevation="sm" onPress={() => handleBookingPress(item)} style={styles.bookingCard}>
+        {/* Top Header — Category and Badge */}
+        <View style={styles.cardHeaderRow}>
+          <View style={styles.categoryBadgeContainer}>
+            <Text style={styles.categoryBadgeText}>{item.category}</Text>
           </View>
           <Badge label={status.label} variant={status.variant} />
         </View>
 
-        {/* Description */}
-        <Text style={styles.description} numberOfLines={2}>{item.description}</Text>
+        {/* Task description */}
+        <Text style={styles.taskDescription} numberOfLines={2}>
+          {item.description}
+        </Text>
 
-        {/* Stats Row */}
-        <View style={styles.statsRow}>
-          <View style={styles.statItem}>
-            <Text style={styles.statLabel}>BUDGET</Text>
-            <Text style={styles.statValue}>Rs. {item.budget.toLocaleString()}</Text>
+        {/* Stats Table */}
+        <View style={styles.statisticsContainer}>
+          <View style={styles.statColumn}>
+            <Text style={styles.statHeading}>YOUR BUDGET</Text>
+            <Text style={styles.statMainValue}>Rs. {item.budget.toLocaleString()}</Text>
           </View>
           <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statLabel}>BIDS</Text>
-            <Text style={[styles.statValue, styles.bidCount]}>{item.bidsCount}</Text>
+          <View style={styles.statColumn}>
+            <Text style={styles.statHeading}>TOTAL BIDS</Text>
+            <Text style={[styles.statMainValue, styles.bidsCountText]}>
+              {item.bidsCount}
+            </Text>
           </View>
           {item.topBid && (
             <>
               <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Text style={styles.statLabel}>LOWEST</Text>
-                <Text style={[styles.statValue, styles.topBid]}>
+              <View style={styles.statColumn}>
+                <Text style={styles.statHeading}>LOWEST OFFER</Text>
+                <Text style={[styles.statMainValue, styles.lowestBidText]}>
                   Rs. {item.topBid.toLocaleString()}
                 </Text>
               </View>
@@ -128,13 +164,15 @@ export default function ActiveBookingsScreen() {
           )}
         </View>
 
-        {/* Footer */}
+        {/* Footer actions */}
         <View style={styles.cardFooter}>
-          {item.createdAt && (
+          <View style={styles.timeContainer}>
+            <Clock size={12} color={Theme.colors.textTertiary} style={{ marginRight: 4 }} />
             <Text style={styles.timeText}>Posted {item.createdAt}</Text>
-          )}
-          <View style={styles.viewBidsLink}>
-            <Text style={styles.viewBidsText}>View Bids →</Text>
+          </View>
+          <View style={styles.linkContainer}>
+            <Text style={styles.linkText}>View Chat & Bids</Text>
+            <ChevronRight size={14} color={Theme.colors.primary} />
           </View>
         </View>
       </Card>
@@ -143,36 +181,45 @@ export default function ActiveBookingsScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Section Header */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Active Bookings</Text>
-        <Text style={styles.sectionCount}>{bookings.length} tasks</Text>
+      {/* Title Header Section */}
+      <View style={styles.pageHeader}>
+        <Text style={styles.pageTitle}>Active Bookings</Text>
+        <View style={styles.countBadge}>
+          <Text style={styles.countBadgeText}>{bookings.length} active</Text>
+        </View>
       </View>
 
-      <FlatList
-        data={bookings}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={renderBookingCard}
-        contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={Theme.colors.primary}
-            colors={[Theme.colors.primary]}
-          />
-        }
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>📋</Text>
-            <Text style={styles.emptyTitle}>No Active Tasks</Text>
-            <Text style={styles.emptyText}>
-              Post a task to get started — providers will bid on it instantly!
-            </Text>
-          </View>
-        }
-      />
+      {loading && !refreshing ? (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={Theme.colors.primary} />
+          <Text style={styles.loadingText}>Fetching active bookings...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={bookings}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={renderBookingCard}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={Theme.colors.primary}
+              colors={[Theme.colors.primary]}
+            />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <MessageSquareDashed size={48} color={Theme.colors.textTertiary} style={{ marginBottom: Theme.spacing.md }} />
+              <Text style={styles.emptyTitle}>No bookings found</Text>
+              <Text style={styles.emptyText}>
+                You don't have any active service requests right now. Go to the "Post Task" screen to hire a professional.
+              </Text>
+            </View>
+          }
+        />
+      )}
     </View>
   );
 }
@@ -182,109 +229,145 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Theme.colors.background,
   },
-  sectionHeader: {
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Theme.colors.background,
+  },
+  loadingText: {
+    color: Theme.colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '500',
+    marginTop: Theme.spacing.md,
+  },
+  pageHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: Theme.spacing.xl,
     paddingTop: Theme.spacing.lg,
     paddingBottom: Theme.spacing.sm,
+    gap: Theme.spacing.sm,
   },
-  sectionTitle: {
-    ...Theme.typography.h3,
+  pageTitle: {
+    fontSize: 22,
+    fontWeight: '800',
     color: Theme.colors.textPrimary,
+    letterSpacing: -0.2,
   },
-  sectionCount: {
-    ...Theme.typography.caption,
-    color: Theme.colors.textTertiary,
+  countBadge: {
     backgroundColor: Theme.colors.borderLight,
-    paddingHorizontal: Theme.spacing.sm,
+    paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: Theme.radius.full,
+  },
+  countBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Theme.colors.textSecondary,
   },
   listContent: {
     paddingHorizontal: Theme.spacing.lg,
     paddingBottom: Theme.spacing.section,
   },
-  cardTopRow: {
+  bookingCard: {
+    backgroundColor: Theme.colors.white,
+    borderRadius: Theme.radius.md,
+    padding: Theme.spacing.lg,
+    marginBottom: Theme.spacing.md,
+    borderWidth: 1,
+    borderColor: Theme.colors.borderLight,
+    ...Theme.shadows.sm,
+  },
+  cardHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Theme.spacing.md,
   },
-  categoryBadge: {
+  categoryBadgeContainer: {
     backgroundColor: Theme.colors.primaryDark,
-    paddingHorizontal: Theme.spacing.md,
+    paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: Theme.radius.xs,
   },
-  categoryText: {
-    fontSize: 12,
+  categoryBadgeText: {
+    fontSize: 10,
     fontWeight: '700',
-    color: Theme.colors.textOnPrimary,
+    color: Theme.colors.white,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
-  description: {
-    ...Theme.typography.body,
+  taskDescription: {
+    fontSize: 15,
+    fontWeight: '500',
     color: Theme.colors.textPrimary,
-    marginBottom: Theme.spacing.lg,
-    lineHeight: 22,
+    lineHeight: 20,
+    marginBottom: Theme.spacing.md,
   },
-  statsRow: {
+  statisticsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Theme.colors.surfaceElevated,
     borderRadius: Theme.radius.sm,
     paddingVertical: Theme.spacing.md,
-    paddingHorizontal: Theme.spacing.lg,
+    paddingHorizontal: Theme.spacing.md,
+    borderWidth: 1,
+    borderColor: Theme.colors.borderLight,
     marginBottom: Theme.spacing.md,
   },
-  statItem: {
+  statColumn: {
     flex: 1,
     alignItems: 'center',
   },
   statDivider: {
     width: 1,
-    height: 30,
+    height: 28,
     backgroundColor: Theme.colors.border,
   },
-  statLabel: {
-    ...Theme.typography.overline,
-    color: Theme.colors.textTertiary,
-    marginBottom: 2,
-    fontSize: 10,
-  },
-  statValue: {
-    fontSize: 16,
+  statHeading: {
+    fontSize: 9,
     fontWeight: '700',
+    color: Theme.colors.textTertiary,
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  statMainValue: {
+    fontSize: 15,
+    fontWeight: '800',
     color: Theme.colors.textPrimary,
   },
-  bidCount: {
+  bidsCountText: {
     color: Theme.colors.primaryLight,
   },
-  topBid: {
+  lowestBidText: {
     color: Theme.colors.successDark,
   },
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: Theme.spacing.sm,
+    paddingTop: Theme.spacing.md,
     borderTopWidth: 1,
     borderTopColor: Theme.colors.borderLight,
   },
-  timeText: {
-    ...Theme.typography.caption,
-    color: Theme.colors.textTertiary,
-  },
-  viewBidsLink: {
+  timeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  viewBidsText: {
-    fontSize: 13,
-    fontWeight: '600',
+  timeText: {
+    fontSize: 11,
+    color: Theme.colors.textTertiary,
+    fontWeight: '500',
+  },
+  linkContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  linkText: {
+    fontSize: 12,
+    fontWeight: '700',
     color: Theme.colors.primary,
   },
   emptyContainer: {
@@ -293,19 +376,16 @@ const styles = StyleSheet.create({
     paddingVertical: Theme.spacing.section * 2,
     paddingHorizontal: Theme.spacing.xxl,
   },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: Theme.spacing.lg,
-  },
   emptyTitle: {
-    ...Theme.typography.h3,
+    fontSize: 16,
+    fontWeight: '700',
     color: Theme.colors.textPrimary,
-    marginBottom: Theme.spacing.sm,
+    marginBottom: Theme.spacing.xs,
   },
   emptyText: {
-    ...Theme.typography.bodySmall,
+    fontSize: 13,
     color: Theme.colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 18,
   },
 });

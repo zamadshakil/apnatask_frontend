@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../navigation/AuthContext';
@@ -16,6 +17,7 @@ import Badge from '../../components/Badge';
 import Button from '../../components/Button';
 import api from '../../services/api';
 import { Theme } from '../../styles/theme';
+import { MapPin, Clock, Banknote, ShieldCheck, Search, Filter, Briefcase } from 'lucide-react-native';
 
 interface Job {
   id: number;
@@ -28,7 +30,7 @@ interface Job {
   createdAt?: string;
 }
 
-// Development mock data — replaces the broken test mock import
+// Development mock data
 const mockJobs: Job[] = [
   {
     id: 101,
@@ -52,7 +54,7 @@ const mockJobs: Job[] = [
   },
   {
     id: 103,
-    category: 'Electrician',
+    category: 'Electrical',
     description: 'Install new ceiling fan and check wiring in bedroom.',
     budget: 2000,
     status: 'pending',
@@ -60,22 +62,38 @@ const mockJobs: Job[] = [
     customerName: 'Bilal A.',
     createdAt: '20 min ago',
   },
+  {
+    id: 104,
+    category: 'Cleaning',
+    description: 'Full house deep cleaning before moving in. 3-bedroom house.',
+    budget: 4500,
+    status: 'pending',
+    distance: '3.1 km',
+    customerName: 'Zainab R.',
+    createdAt: '35 min ago',
+  },
 ];
 
-const categoryIcons: Record<string, string> = {
-  'Plumbing': '🔧',
-  'AC Repair': '❄️',
-  'Electrician': '⚡',
-  'Cleaning': '🧹',
-  'Painting': '🎨',
-  'Carpentry': '🪚',
-  'Shifting': '📦',
+const categories = ['All', 'Plumbing', 'AC Repair', 'Electrical', 'Cleaning', 'Painting', 'Carpentry'];
+
+const categoryValues: Record<string, string> = {
+  Plumbing: 'plumber',
+  'AC Repair': 'ac_repair',
+  Electrical: 'electrician',
+  Cleaning: 'cleaning',
+  Painting: 'painting',
+  Carpentry: 'carpenter',
 };
+
+const categoryLabels: Record<string, string> = Object.fromEntries(
+  Object.entries(categoryValues).map(([label, value]) => [value, label])
+);
 
 export default function FindJobsScreen() {
   const navigation = useNavigation<any>();
   const { userId, userToken } = useAuth();
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState('All');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
@@ -86,38 +104,43 @@ export default function FindJobsScreen() {
     setError('');
 
     try {
-      // Try fetching from actual API
-      const response = await api.get('/matching', {
+      const response = await api.get('/jobs', {
         params: {
-          latitude: 33.6844,
-          longitude: 73.0479,
-          radius_km: 5.0,
-          category: 'plumber',
+          category: selectedCategory === 'All' ? undefined : categoryValues[selectedCategory],
         },
       });
-      
+
       if (response.data && response.data.length > 0) {
-        setJobs(response.data.map((p: any) => ({
-          id: p.provider_id,
-          category: p.category,
-          description: `Service provider ${p.name} available`,
-          budget: 0,
-          status: 'pending',
-          distance: `${p.distance_km.toFixed(1)} km`,
-          customerName: p.name,
+        setJobs(response.data.map((job: any) => ({
+          id: job.id,
+          category: categoryLabels[job.category] || job.category || 'General',
+          description: job.description || 'Service request',
+          budget: job.budget || 0,
+          status: job.status || 'pending',
+          distance: 'Nearby',
+          customerName: 'ApnaTask Customer',
+          createdAt: 'Just now',
         })));
       } else {
-        // Fallback to mock data during development
-        setJobs(mockJobs);
+        // Fallback to mock data filtered by category
+        setJobs(
+          selectedCategory === 'All'
+            ? mockJobs
+            : mockJobs.filter((job) => job.category === selectedCategory)
+        );
       }
     } catch (err: any) {
-      // Use mock data when backend is not available
-      setJobs(mockJobs);
+      // Use mock data when backend is not fully available
+      setJobs(
+        selectedCategory === 'All'
+          ? mockJobs
+          : mockJobs.filter((job) => job.category === selectedCategory)
+      );
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [selectedCategory]);
 
   useEffect(() => {
     fetchJobs();
@@ -131,49 +154,54 @@ export default function FindJobsScreen() {
   };
 
   const renderJobCard = ({ item }: { item: Job }) => {
-    const icon = categoryIcons[item.category] || '📋';
-
     return (
-      <Card elevation="md" style={styles.jobCard}>
-        {/* Top Row */}
+      <Card elevation="sm" style={styles.jobCard}>
+        {/* Top Metadata Row */}
         <View style={styles.jobTopRow}>
-          <View style={styles.jobCategoryRow}>
-            <View style={styles.categoryIconContainer}>
-              <Text style={styles.categoryIcon}>{icon}</Text>
-            </View>
-            <View>
-              <Text style={styles.jobCategory}>{item.category}</Text>
-              {item.customerName && (
-                <Text style={styles.customerName}>by {item.customerName}</Text>
-              )}
-            </View>
+          <View style={styles.categoryBadge}>
+            <Briefcase size={12} color={Theme.colors.primary} style={{ marginRight: 4 }} />
+            <Text style={styles.jobCategory}>{item.category}</Text>
           </View>
-          {item.distance && (
-            <Badge label={item.distance} variant="info" size="md" />
-          )}
+          <View style={styles.distanceBadgeRow}>
+            <MapPin size={12} color={Theme.colors.textSecondary} style={{ marginRight: 2 }} />
+            <Text style={styles.distanceText}>{item.distance || 'Nearby'}</Text>
+          </View>
         </View>
 
-        {/* Description */}
-        <Text style={styles.jobDescription} numberOfLines={2}>
+        {/* Client Name & Verification */}
+        <View style={styles.clientRow}>
+          <Text style={styles.customerName}>{item.customerName || 'ApnaTask User'}</Text>
+          <View style={styles.verifiedContainer}>
+            <ShieldCheck size={14} color={Theme.colors.successDark} />
+            <Text style={styles.verifiedText}>Verified</Text>
+          </View>
+        </View>
+
+        {/* Task Description */}
+        <Text style={styles.jobDescription} numberOfLines={3}>
           {item.description}
         </Text>
 
-        {/* Budget & Time */}
-        <View style={styles.jobMetaRow}>
-          {item.budget > 0 && (
-            <View style={styles.budgetContainer}>
-              <Text style={styles.budgetLabel}>Budget</Text>
+        {/* Pricing, Timing, and Bid Action */}
+        <View style={styles.divider} />
+
+        <View style={styles.cardFooter}>
+          <View style={styles.budgetCol}>
+            <Text style={styles.budgetLabel}>CLIENT BUDGET</Text>
+            <View style={styles.budgetRow}>
+              <Banknote size={16} color={Theme.colors.successDark} style={{ marginRight: 4 }} />
               <Text style={styles.budgetValue}>Rs. {item.budget.toLocaleString()}</Text>
             </View>
-          )}
-          {item.createdAt && (
-            <Text style={styles.timeAgo}>{item.createdAt}</Text>
-          )}
+          </View>
+
+          <View style={styles.timeCol}>
+            <Clock size={12} color={Theme.colors.textTertiary} style={{ marginRight: 4 }} />
+            <Text style={styles.timeAgo}>{item.createdAt || '10m ago'}</Text>
+          </View>
         </View>
 
-        {/* Action */}
         <Button
-          title="Place Bid"
+          title="Send Bid Offer"
           onPress={() => handleBidPress(item)}
           type="primary"
           size="md"
@@ -183,49 +211,79 @@ export default function FindJobsScreen() {
     );
   };
 
-  if (loading) {
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={Theme.colors.primary} />
-        <Text style={styles.loadingText}>Finding jobs near you...</Text>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.headerSection}>
+      {/* Search Header Banner */}
+      <View style={styles.headerBanner}>
         <Text style={styles.headerTitle}>Nearby Jobs</Text>
         <Text style={styles.headerSubtitle}>
-          {jobs.length} jobs within 5 km of your location
+          Real-time service request matching for verified partners
         </Text>
       </View>
 
-      <FlatList
-        data={jobs}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={renderJobCard}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => fetchJobs(true)}
-            tintColor={Theme.colors.primary}
-            colors={[Theme.colors.primary]}
-          />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>🔍</Text>
-            <Text style={styles.emptyTitle}>No Nearby Jobs</Text>
-            <Text style={styles.emptyText}>
-              No jobs available in your area right now. Pull down to refresh.
-            </Text>
-          </View>
-        }
-      />
+      {/* Categories Filter Bar */}
+      <View style={styles.filterSection}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterScrollContent}
+        >
+          {categories.map((cat) => {
+            const isSelected = selectedCategory === cat;
+            return (
+              <TouchableOpacity
+                key={cat}
+                style={[
+                  styles.filterChip,
+                  isSelected && styles.filterChipActive
+                ]}
+                onPress={() => setSelectedCategory(cat)}
+                activeOpacity={0.7}
+              >
+                <Text style={[
+                  styles.filterChipText,
+                  isSelected && styles.filterChipTextActive
+                ]}>
+                  {cat}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {/* Main Jobs List */}
+      {loading && !refreshing ? (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={Theme.colors.primary} />
+          <Text style={styles.loadingText}>Searching matching leads...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={jobs}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={renderJobCard}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => fetchJobs(true)}
+              tintColor={Theme.colors.primary}
+              colors={[Theme.colors.primary]}
+            />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Search size={44} color={Theme.colors.textTertiary} style={{ marginBottom: Theme.spacing.md }} />
+              <Text style={styles.emptyTitle}>No matching jobs</Text>
+              <Text style={styles.emptyText}>
+                No pending requests for "{selectedCategory}" in your region. Pull down to refresh or check other categories.
+              </Text>
+            </View>
+          }
+        />
+      )}
     </View>
   );
 }
@@ -242,96 +300,175 @@ const styles = StyleSheet.create({
     backgroundColor: Theme.colors.background,
   },
   loadingText: {
-    ...Theme.typography.bodySmall,
     color: Theme.colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '500',
     marginTop: Theme.spacing.md,
   },
-  headerSection: {
+  headerBanner: {
+    backgroundColor: Theme.colors.primaryDark,
     paddingHorizontal: Theme.spacing.xl,
-    paddingTop: Theme.spacing.lg,
-    paddingBottom: Theme.spacing.sm,
+    paddingTop: Theme.spacing.xl,
+    paddingBottom: Theme.spacing.lg,
+    borderBottomLeftRadius: Theme.radius.lg,
+    borderBottomRightRadius: Theme.radius.lg,
+    ...Theme.shadows.md,
   },
   headerTitle: {
-    ...Theme.typography.h2,
-    color: Theme.colors.textPrimary,
+    fontSize: 22,
+    fontWeight: '800',
+    color: Theme.colors.white,
+    letterSpacing: -0.2,
   },
   headerSubtitle: {
-    ...Theme.typography.bodySmall,
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.75)',
+    marginTop: 4,
+  },
+  filterSection: {
+    paddingVertical: Theme.spacing.md,
+    backgroundColor: Theme.colors.background,
+  },
+  filterScrollContent: {
+    paddingHorizontal: Theme.spacing.lg,
+    gap: Theme.spacing.xs,
+  },
+  filterChip: {
+    backgroundColor: Theme.colors.white,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: Theme.radius.full,
+    borderWidth: 1,
+    borderColor: Theme.colors.border,
+    marginRight: 6,
+  },
+  filterChipActive: {
+    backgroundColor: Theme.colors.primary,
+    borderColor: Theme.colors.primary,
+  },
+  filterChipText: {
+    fontSize: 13,
+    fontWeight: '600',
     color: Theme.colors.textSecondary,
-    marginTop: 2,
+  },
+  filterChipTextActive: {
+    color: Theme.colors.white,
   },
   listContent: {
     paddingHorizontal: Theme.spacing.lg,
     paddingBottom: Theme.spacing.section,
   },
   jobCard: {
-    marginVertical: Theme.spacing.sm,
+    backgroundColor: Theme.colors.white,
+    borderRadius: Theme.radius.md,
+    padding: Theme.spacing.lg,
+    marginBottom: Theme.spacing.md,
+    borderWidth: 1,
+    borderColor: Theme.colors.borderLight,
+    ...Theme.shadows.sm,
   },
   jobTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Theme.spacing.md,
+    marginBottom: Theme.spacing.sm,
   },
-  jobCategoryRow: {
+  categoryBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Theme.spacing.md,
-  },
-  categoryIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#F0FFF4',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#C8E6C9',
-  },
-  categoryIcon: {
-    fontSize: 20,
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: Theme.radius.xs,
   },
   jobCategory: {
-    ...Theme.typography.h3,
-    color: Theme.colors.textPrimary,
-    fontSize: 16,
+    fontSize: 12,
+    fontWeight: '700',
+    color: Theme.colors.primary,
+    textTransform: 'uppercase',
+  },
+  distanceBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  distanceText: {
+    fontSize: 12,
+    color: Theme.colors.textSecondary,
+    fontWeight: '600',
+  },
+  clientRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Theme.spacing.xs,
+    marginBottom: Theme.spacing.sm,
   },
   customerName: {
-    ...Theme.typography.caption,
-    color: Theme.colors.textTertiary,
+    fontSize: 16,
+    fontWeight: '700',
+    color: Theme.colors.textPrimary,
+  },
+  verifiedContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E3F2FD',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: Theme.radius.xs,
+    gap: 2,
+  },
+  verifiedText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#1565C0',
   },
   jobDescription: {
-    ...Theme.typography.body,
-    color: Theme.colors.textPrimary,
+    fontSize: 14,
+    color: Theme.colors.textSecondary,
+    lineHeight: 20,
     marginBottom: Theme.spacing.md,
-    lineHeight: 22,
   },
-  jobMetaRow: {
+  divider: {
+    height: 1,
+    backgroundColor: Theme.colors.borderLight,
+    marginBottom: Theme.spacing.md,
+  },
+  cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Theme.spacing.lg,
+    marginBottom: Theme.spacing.md,
   },
-  budgetContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 6,
+  budgetCol: {
+    justifyContent: 'center',
   },
   budgetLabel: {
-    ...Theme.typography.caption,
+    fontSize: 9,
+    fontWeight: '700',
     color: Theme.colors.textTertiary,
+    letterSpacing: 0.5,
+  },
+  budgetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
   },
   budgetValue: {
     fontSize: 18,
-    fontWeight: '700',
-    color: Theme.colors.primary,
+    fontWeight: '800',
+    color: Theme.colors.textPrimary,
+  },
+  timeCol: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   timeAgo: {
-    ...Theme.typography.caption,
+    fontSize: 11,
     color: Theme.colors.textTertiary,
+    fontWeight: '500',
   },
   bidButton: {
     width: '100%',
+    borderRadius: Theme.radius.sm,
   },
   emptyContainer: {
     alignItems: 'center',
@@ -339,18 +476,16 @@ const styles = StyleSheet.create({
     paddingVertical: Theme.spacing.section * 2,
     paddingHorizontal: Theme.spacing.xxl,
   },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: Theme.spacing.lg,
-  },
   emptyTitle: {
-    ...Theme.typography.h3,
+    fontSize: 16,
+    fontWeight: '700',
     color: Theme.colors.textPrimary,
-    marginBottom: Theme.spacing.sm,
+    marginBottom: Theme.spacing.xs,
   },
   emptyText: {
-    ...Theme.typography.bodySmall,
+    fontSize: 13,
     color: Theme.colors.textSecondary,
     textAlign: 'center',
+    lineHeight: 18,
   },
 });

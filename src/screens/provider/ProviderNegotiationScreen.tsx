@@ -7,16 +7,15 @@ import {
   FlatList,
   TextInput,
   TouchableOpacity,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import { ArrowLeft, Send, Info, Wifi, WifiOff } from 'lucide-react-native';
 import { useAuth } from '../../navigation/AuthContext';
 import ChatBubble from '../../components/ChatBubble';
-import Badge from '../../components/Badge';
-import Button from '../../components/Button';
 import { NegotiationWebSocket } from '../../services/websocket';
 import api from '../../services/api';
 import { Theme } from '../../styles/theme';
@@ -24,7 +23,7 @@ import { Theme } from '../../styles/theme';
 interface ChatMessage {
   id: string;
   type: 'chat' | 'bid' | 'accept';
-  sender_id: number;
+  sender_id: string;
   role: 'customer' | 'provider';
   message?: string;
   amount?: number;
@@ -42,7 +41,7 @@ export const ProviderNegotiationScreen = () => {
   const { userId } = useAuth();
 
   const { bookingId = 1, token = 'mock-jwt-provider-20' } = route.params || {};
-  const providerId = userId || 102;
+  const providerId = userId || '102';
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
@@ -80,7 +79,7 @@ export const ProviderNegotiationScreen = () => {
         const msg: ChatMessage = {
           id: Date.now().toString() + Math.random(),
           type: data.type,
-          sender_id: data.sender_id,
+          sender_id: String(data.sender_id),
           role: data.role,
           message: data.message,
           amount: data.amount,
@@ -115,7 +114,7 @@ export const ProviderNegotiationScreen = () => {
     wsRef.current?.send(msg);
     setMessages((prev) => [
       ...prev,
-      { ...msg, id: Date.now().toString(), amount: undefined, timestamp: formatTime() },
+      { ...msg, id: Date.now().toString(), sender_id: String(providerId), amount: undefined, timestamp: formatTime() },
     ]);
     setInputText('');
   };
@@ -146,7 +145,7 @@ export const ProviderNegotiationScreen = () => {
     wsRef.current?.send(msg);
     setMessages((prev) => [
       ...prev,
-      { ...msg, id: Date.now().toString(), timestamp: formatTime() },
+      { ...msg, id: Date.now().toString(), sender_id: String(providerId), timestamp: formatTime() },
     ]);
     setBidAmount('');
   };
@@ -172,7 +171,7 @@ export const ProviderNegotiationScreen = () => {
       return (
         <View style={styles.bidWrapper}>
           <View style={[styles.bidBubble, isMe ? styles.bidSent : styles.bidReceived]}>
-            <Text style={styles.bidLabel}>{isMe ? '📤 Your Bid' : '📥 Counter-offer'}</Text>
+            <Text style={styles.bidLabel}>{isMe ? '📤 Your Bid' : '📥 Customer Offer'}</Text>
             <Text style={styles.bidAmount}>Rs. {item.amount?.toLocaleString()}</Text>
             <Text style={styles.bidTime}>{item.timestamp}</Text>
           </View>
@@ -185,7 +184,7 @@ export const ProviderNegotiationScreen = () => {
         isSent={isMe}
         message={item.message}
         timestamp={item.timestamp}
-        senderName={!isMe ? `Customer #${item.sender_id}` : undefined}
+        senderName={!isMe ? `Customer #${item.sender_id.slice(0, 5)}` : undefined}
       />
     );
   };
@@ -195,14 +194,18 @@ export const ProviderNegotiationScreen = () => {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backText}>← Back</Text>
+          <ArrowLeft size={22} color={Theme.colors.textOnDark} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Job #{bookingId}</Text>
           <View style={styles.connectionRow}>
-            <View style={[styles.connectionDot, isConnected ? styles.dotOnline : styles.dotOffline]} />
+            {isConnected ? (
+              <Wifi size={12} color={Theme.colors.accent} />
+            ) : (
+              <WifiOff size={12} color={Theme.colors.error} />
+            )}
             <Text style={styles.connectionLabel}>
-              {isConnected ? 'Live' : 'Offline'}
+              {isConnected ? 'Connected' : 'Offline'}
             </Text>
           </View>
         </View>
@@ -240,10 +243,10 @@ export const ProviderNegotiationScreen = () => {
             onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
             ListEmptyComponent={
               <View style={styles.emptyChat}>
-                <Text style={styles.emptyChatIcon}>🔧</Text>
-                <Text style={styles.emptyChatTitle}>Ready to Bid</Text>
+                <Info size={40} color={Theme.colors.textTertiary} style={styles.emptyChatIcon} />
+                <Text style={styles.emptyChatTitle}>Negotiation Started</Text>
                 <Text style={styles.emptyChatText}>
-                  Submit your bid below. The customer will see it in real-time and can accept or negotiate.
+                  Submit your bid below. The customer will see it in real-time and can accept or send messages to negotiate.
                 </Text>
               </View>
             }
@@ -292,7 +295,7 @@ export const ProviderNegotiationScreen = () => {
               activeOpacity={0.7}
               testID="button-send-chat"
             >
-              <Text style={styles.sendBtnText}>➤</Text>
+              <Send size={18} color={Theme.colors.white} />
             </TouchableOpacity>
           </View>
         </View>
@@ -311,22 +314,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: Theme.colors.darkSlate,
     paddingHorizontal: Theme.spacing.lg,
-    paddingVertical: Theme.spacing.md,
+    paddingVertical: 12,
   },
   backBtn: {
-    width: 60,
-  },
-  backText: {
-    color: Theme.colors.textOnDark,
-    fontSize: 14,
-    fontWeight: '600',
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerCenter: {
     flex: 1,
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '700',
     color: Theme.colors.textOnDark,
   },
@@ -336,29 +337,19 @@ const styles = StyleSheet.create({
     gap: 4,
     marginTop: 2,
   },
-  connectionDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-  },
-  dotOnline: {
-    backgroundColor: Theme.colors.accent,
-  },
-  dotOffline: {
-    backgroundColor: Theme.colors.error,
-  },
   connectionLabel: {
     fontSize: 11,
-    color: 'rgba(233,237,239,0.7)',
+    color: 'rgba(233,237,239,0.75)',
+    fontWeight: '500',
   },
   walletBadge: {
     backgroundColor: 'rgba(37,211,102,0.2)',
     paddingHorizontal: Theme.spacing.md,
-    paddingVertical: 4,
+    paddingVertical: 6,
     borderRadius: Theme.radius.full,
   },
   walletBadgeText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
     color: Theme.colors.accent,
   },
@@ -388,7 +379,7 @@ const styles = StyleSheet.create({
   },
   chatBackground: {
     flex: 1,
-    backgroundColor: Theme.colors.chatBackground,
+    backgroundColor: '#F5F6F8',
   },
   messageList: {
     paddingVertical: Theme.spacing.md,
@@ -465,30 +456,30 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 80,
+    paddingVertical: 100,
     paddingHorizontal: Theme.spacing.xxl,
   },
   emptyChatIcon: {
-    fontSize: 48,
     marginBottom: Theme.spacing.md,
   },
   emptyChatTitle: {
-    ...Theme.typography.h3,
-    color: Theme.colors.textSecondary,
+    fontSize: 18,
+    fontWeight: '700',
+    color: Theme.colors.textPrimary,
     marginBottom: Theme.spacing.sm,
   },
   emptyChatText: {
-    ...Theme.typography.bodySmall,
-    color: Theme.colors.textTertiary,
+    fontSize: 13,
+    color: Theme.colors.textSecondary,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 18,
   },
   inputPanel: {
-    backgroundColor: Theme.colors.surface,
+    backgroundColor: Theme.colors.white,
     borderTopWidth: 1,
     borderTopColor: Theme.colors.borderLight,
     paddingHorizontal: Theme.spacing.md,
-    paddingVertical: Theme.spacing.sm,
+    paddingVertical: Theme.spacing.md,
     gap: Theme.spacing.sm,
   },
   bidInputRow: {
@@ -498,6 +489,8 @@ const styles = StyleSheet.create({
     borderRadius: Theme.radius.md,
     paddingHorizontal: Theme.spacing.md,
     gap: Theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: Theme.colors.warning,
   },
   bidInput: {
     flex: 1,
@@ -526,27 +519,24 @@ const styles = StyleSheet.create({
   },
   chatInput: {
     flex: 1,
-    backgroundColor: Theme.colors.background,
+    backgroundColor: '#F5F6F8',
     borderRadius: Theme.radius.xl,
     paddingHorizontal: Theme.spacing.lg,
-    paddingVertical: 10,
+    paddingVertical: 12,
     fontSize: 16,
     color: Theme.colors.textPrimary,
   },
   sendBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: Theme.colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
+    ...Theme.shadows.sm,
   },
   sendBtnDisabled: {
     backgroundColor: Theme.colors.textTertiary,
-  },
-  sendBtnText: {
-    fontSize: 18,
-    color: Theme.colors.white,
   },
 });
 

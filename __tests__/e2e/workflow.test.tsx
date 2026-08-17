@@ -39,6 +39,8 @@ describe('Real-World Scenario E2E Workflows', () => {
       customer_id: 10,
       amount: 150.0,
       status: 'pending',
+      category: 'plumber',
+      description: 'Repair a leaking pipe',
       customer_phone: '+923001234567',
       provider_id: null,
     });
@@ -85,8 +87,10 @@ describe('Real-World Scenario E2E Workflows', () => {
     it('renders ActiveBookingsScreen with booking cards', async () => {
       const view = render(withAuth(<ActiveBookingsScreen />, { userRole: 'customer', userId: 10 }));
 
-      // Should show the section header
       expect(view.getByText('Active Bookings')).toBeTruthy();
+      await waitFor(() => {
+        expect(view.getByText('Repair a leaking pipe')).toBeTruthy();
+      });
     });
   });
 

@@ -1,26 +1,20 @@
-// src/navigation/ProviderTab.tsx — Premium provider bottom tab navigator
+// src/navigation/ProviderTab.tsx — Premium provider bottom tab navigator with strict TypeScript types
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, SafeAreaView, StatusBar } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, StatusBar } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Search, Wallet, LogOut, Home } from 'lucide-react-native';
+import ProviderHomeScreen from '../screens/provider/ProviderHomeScreen';
 import FindJobsScreen from '../screens/provider/FindJobsScreen';
 import WalletScreen from '../screens/provider/WalletScreen';
 import { useAuth } from './AuthContext';
 import { Theme } from '../styles/theme';
+import { ProviderTabParamList } from '../types/navigation';
 
-interface TabItem {
-  key: 'findJobs' | 'wallet';
-  label: string;
-  icon: string;
-  activeIcon: string;
-}
+export type ProviderTabType = keyof ProviderTabParamList;
 
-const TABS: TabItem[] = [
-  { key: 'findJobs', label: 'Find Jobs', icon: '🔍', activeIcon: '🔍' },
-  { key: 'wallet', label: 'Wallet', icon: '💰', activeIcon: '💰' },
-];
-
-export const ProviderTab = () => {
-  const [activeTab, setActiveTab] = useState<'findJobs' | 'wallet'>('findJobs');
-  const { logout, userId } = useAuth();
+export const ProviderTab: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<ProviderTabType>('ProviderHome');
+  const { logout } = useAuth();
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -30,38 +24,70 @@ export const ProviderTab = () => {
       <View style={styles.headerBar}>
         <View>
           <Text style={styles.headerTitle}>ApnaTask Pro</Text>
-          <Text style={styles.headerSubtitle}>Provider #{userId}</Text>
+          <Text style={styles.headerSubtitle}>Logged in securely</Text>
         </View>
         <TouchableOpacity onPress={logout} style={styles.logoutBtn} activeOpacity={0.7}>
+          <LogOut size={16} color={Theme.colors.textOnDark} style={styles.logoutIcon} />
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
       </View>
 
       {/* Screen Content */}
       <View style={styles.content}>
-        {activeTab === 'findJobs' ? <FindJobsScreen /> : <WalletScreen />}
+        {activeTab === 'ProviderHome' ? (
+          <ProviderHomeScreen
+            onNavigateToFindJobs={() => setActiveTab('FindJobs')}
+            onNavigateToWallet={() => setActiveTab('ProviderWallet')}
+            providerName="Ali Khan"
+            walletBalance={2450}
+          />
+        ) : activeTab === 'FindJobs' ? (
+          <FindJobsScreen />
+        ) : (
+          <WalletScreen />
+        )}
       </View>
 
       {/* Bottom Tab Bar */}
       <View style={styles.tabBar}>
-        {TABS.map((tab) => {
-          const isActive = activeTab === tab.key;
-          return (
-            <TouchableOpacity
-              key={tab.key}
-              onPress={() => setActiveTab(tab.key)}
-              style={[styles.tabItem, isActive && styles.tabItemActive]}
-              activeOpacity={0.7}
-              testID={`tab-${tab.key}`}
-            >
-              <Text style={styles.tabIcon}>{isActive ? tab.activeIcon : tab.icon}</Text>
-              <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
-                {tab.label}
-              </Text>
-              {isActive && <View style={styles.activeIndicator} />}
-            </TouchableOpacity>
-          );
-        })}
+        <TouchableOpacity
+          onPress={() => setActiveTab('ProviderHome')}
+          style={styles.tabItem}
+          activeOpacity={0.7}
+          testID="tab-home"
+        >
+          <Home size={20} color={activeTab === 'ProviderHome' ? Theme.colors.primary : Theme.colors.textTertiary} />
+          <Text style={[styles.tabLabel, activeTab === 'ProviderHome' && styles.tabLabelActive]}>
+            Home
+          </Text>
+          {activeTab === 'ProviderHome' && <View style={styles.activeIndicator} />}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => setActiveTab('FindJobs')}
+          style={styles.tabItem}
+          activeOpacity={0.7}
+          testID="tab-findJobs"
+        >
+          <Search size={20} color={activeTab === 'FindJobs' ? Theme.colors.primary : Theme.colors.textTertiary} />
+          <Text style={[styles.tabLabel, activeTab === 'FindJobs' && styles.tabLabelActive]}>
+            Find Jobs
+          </Text>
+          {activeTab === 'FindJobs' && <View style={styles.activeIndicator} />}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => setActiveTab('ProviderWallet')}
+          style={styles.tabItem}
+          activeOpacity={0.7}
+          testID="tab-wallet"
+        >
+          <Wallet size={20} color={activeTab === 'ProviderWallet' ? Theme.colors.primary : Theme.colors.textTertiary} />
+          <Text style={[styles.tabLabel, activeTab === 'ProviderWallet' && styles.tabLabelActive]}>
+            Wallet
+          </Text>
+          {activeTab === 'ProviderWallet' && <View style={styles.activeIndicator} />}
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -78,7 +104,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: Theme.colors.darkSlate,
     paddingHorizontal: Theme.spacing.xl,
-    paddingVertical: Theme.spacing.md,
+    paddingVertical: 14,
     ...Theme.shadows.md,
   },
   headerTitle: {
@@ -93,10 +119,16 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   logoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.12)',
     paddingHorizontal: Theme.spacing.lg,
     paddingVertical: 6,
     borderRadius: Theme.radius.full,
+    gap: 4,
+  },
+  logoutIcon: {
+    marginRight: 2,
   },
   logoutText: {
     color: Theme.colors.textOnDark,
@@ -119,25 +151,18 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: Theme.spacing.sm,
+    paddingVertical: 12,
     position: 'relative',
-  },
-  tabItemActive: {
-    // active styling handled by children
-  },
-  tabIcon: {
-    fontSize: 20,
-    marginBottom: 2,
   },
   tabLabel: {
     fontSize: 11,
-    fontWeight: '500',
+    fontWeight: '600',
     color: Theme.colors.textTertiary,
     letterSpacing: 0.2,
+    marginTop: 4,
   },
   tabLabelActive: {
     color: Theme.colors.primary,
-    fontWeight: '700',
   },
   activeIndicator: {
     position: 'absolute',

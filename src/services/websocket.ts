@@ -77,7 +77,7 @@ export class NegotiationWebSocket {
   send(data: {
     type: 'bid' | 'chat' | 'accept';
     booking_id: number;
-    sender_id: number;
+    sender_id: string | number;
     role: 'customer' | 'provider';
     amount?: number;
     message?: string;

@@ -11,7 +11,9 @@ export interface Booking {
   id: number;
   customer_id: number;
   amount: number;
-  status: 'pending' | 'accepted' | 'completed' | 'canceled';
+  category?: string;
+  description?: string;
+  status: 'pending' | 'bidding' | 'accepted' | 'completed' | 'canceled';
   customer_phone: string;
   provider_id: number | null;
   transaction_id?: string | null;
@@ -25,5 +27,14 @@ export const mockProviders: Provider[] = [
 ];
 
 export const mockBookings: Booking[] = [
-  { id: 1, customer_id: 10, amount: 150.0, status: 'pending', customer_phone: '+923001234567', provider_id: null }
+  {
+    id: 1,
+    customer_id: 10,
+    amount: 150,
+    category: 'plumber',
+    description: 'Repair a leaking pipe',
+    status: 'pending',
+    customer_phone: '+923001234567',
+    provider_id: null,
+  }
 ];

@@ -8,6 +8,7 @@ module.exports = {
     '^msw/node$': '<rootDir>/node_modules/msw/lib/node/index.js',
     '^msw/native$': '<rootDir>/node_modules/msw/lib/native/index.js',
     '^msw$': '<rootDir>/node_modules/msw/lib/core/index.js',
+    '^lucide-react-native$': '<rootDir>/__tests__/mocks/lucide-react-native-mock.js',
   },
   transform: {
     '\\.[jt]sx?$': [

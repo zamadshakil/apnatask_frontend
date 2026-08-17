@@ -1,10 +1,10 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useContext } from 'react';
 
 export interface AuthContextType {
   userToken: string | null;
   userRole: 'customer' | 'provider' | null;
-  userId: number | null;
-  login: (role: 'customer' | 'provider', userId?: number, token?: string) => void;
+  userId: string | null;
+  login: (role: 'customer' | 'provider', userId: string, token: string) => void;
   logout: () => void;
 }
 
