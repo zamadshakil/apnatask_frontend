@@ -1,10 +1,13 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import Button from '../../src/components/Button';
+import Card from '../../src/components/Card';
 import Input from '../../src/components/Input';
+import { FadeIn } from '../../src/components/Motion';
 import { Screen } from '../../src/components/Screen';
 import { supabase } from '../../src/services/supabaseClient';
 import { Theme } from '../../src/styles/theme';
@@ -49,13 +52,13 @@ export default function PhoneAuthScreen() {
   });
 
   return (
-    <Screen>
-      <View style={styles.hero}>
+    <Screen style={styles.screen}>
+      <FadeIn><LinearGradient colors={Theme.gradients.hero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
         <Text style={styles.brand}>ApnaTask</Text>
         <Text style={styles.title}>Trusted help, close to home.</Text>
         <Text style={styles.copy}>Use your Pakistani mobile number. Standard SMS charges may apply.</Text>
-      </View>
-      <View style={styles.form}>
+      </LinearGradient></FadeIn>
+      <FadeIn delay={80}><Card variant="glass" elevation="md" style={styles.form}>
         {__DEV__ && <Text style={styles.localHint}>Local preview: use 0300 0000001, then code 123456.</Text>}
         <Controller control={control} name="phone" render={({ field, fieldState }) => (
           <Input label="Mobile number" keyboardType="phone-pad" placeholder="0300 1234567" editable={!sentTo} value={field.value} onChangeText={field.onChange} error={fieldState.error?.message} />
@@ -75,17 +78,18 @@ export default function PhoneAuthScreen() {
         <Button title={sentTo ? 'Verify and continue' : 'Send verification code'} onPress={submit} loading={busy} size="lg" />
         {sentTo && <Button title="Use a different number" onPress={() => { setSentTo(null); setFeedback(null); }} type="outline" />}
         <Text style={styles.terms}>By continuing, you confirm you are 18 or older and agree to ApnaTask’s Terms and Privacy Policy.</Text>
-      </View>
+      </Card></FadeIn>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  hero: { backgroundColor: Theme.colors.primary, borderRadius: 24, padding: 28, marginBottom: 24 },
-  brand: { color: '#fff', fontWeight: '800', fontSize: 18 },
-  title: { color: '#fff', fontWeight: '800', fontSize: 30, marginTop: 28 },
-  copy: { color: 'rgba(255,255,255,.8)', fontSize: 15, lineHeight: 22, marginTop: 8 },
-  form: { gap: 12 },
+  screen: { maxWidth: 580, paddingTop: Theme.spacing.xxl },
+  hero: { borderRadius: Theme.radius.xxl, padding: 30, marginBottom: Theme.spacing.xl, ...(Platform.OS === 'web' ? ({ boxShadow: Theme.webShadows.lg } as ViewStyle) : Theme.shadows.lg) },
+  brand: { ...Theme.typography.h3, color: '#fff' },
+  title: { ...Theme.typography.display, color: '#fff', marginTop: 34 },
+  copy: { ...Theme.typography.body, color: 'rgba(255,255,255,.78)', marginTop: 9 },
+  form: { gap: 4, padding: Theme.spacing.xl, borderRadius: Theme.radius.xl },
   terms: { color: Theme.colors.textSecondary, fontSize: 12, lineHeight: 18, textAlign: 'center', marginTop: 8 },
   localHint: { color: Theme.colors.textSecondary, fontSize: 13, lineHeight: 20 },
   error: { color: Theme.colors.error, fontSize: 14, lineHeight: 20, fontWeight: '600' },

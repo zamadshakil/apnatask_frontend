@@ -2,11 +2,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery } from '@tanstack/react-query';
 import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
+import { Camera, MapPin } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, StyleSheet, Text, View } from 'react-native';
 import Button from '../../../src/components/Button';
+import Card from '../../../src/components/Card';
 import Input from '../../../src/components/Input';
+import { FadeIn } from '../../../src/components/Motion';
 import { Screen } from '../../../src/components/Screen';
+import TactilePressable from '../../../src/components/TactilePressable';
 import { createIdempotencyKey, typedApi } from '../../../src/services/api';
 import { isOnline } from '../../../src/services/connectivity';
 import { mapService } from '../../../src/services/maps';
@@ -50,17 +54,25 @@ export default function NewTaskScreen() {
       await AsyncStorage.removeItem(DRAFT_KEY); router.replace({ pathname: '/(customer)/task/[id]', params: { id: data.id } });
     } catch (error) { Alert.alert('Task not posted', error instanceof Error ? error.message : 'Please retry.'); } finally { setBusy(false); }
   };
-  return <Screen>
-    <Text style={styles.label}>SERVICE</Text><View style={styles.categories}>{categories.data?.map((category) => <Pressable key={category.id} onPress={() => update('categoryId', category.id)} style={[styles.chip, draft.categoryId === category.id && styles.active]}><Text style={draft.categoryId === category.id && styles.activeText}>{category.name_en}</Text></Pressable>)}</View>
-    <Input label="Short title" value={draft.title} onChangeText={(value) => update('title', value)} placeholder="Leaking kitchen sink" maxLength={120} />
-    <Input label="Describe the work" value={draft.description} onChangeText={(value) => update('description', value)} multiline numberOfLines={5} maxLength={2000} />
-    <Input label="Budget in PKR (optional)" value={draft.budget} onChangeText={(value) => update('budget', value.replace(/\D/g, ''))} keyboardType="number-pad" />
-    <Button title="Use my current location" type="outline" onPress={() => void locate()} />
-    <Input label="Exact address (private until selection)" value={draft.address} onChangeText={(value) => update('address', value)} />
-    <Input label="Area / locality" value={draft.area} onChangeText={(value) => update('area', value)} /><Input label="City" value={draft.city} onChangeText={(value) => update('city', value)} />
-    <Text style={styles.label}>PHOTOS ({images.length}/5)</Text><View style={styles.images}>{images.map((image) => <Image key={image.uri} source={{ uri: image.uri }} style={styles.image} />)}</View>
-    <Button title="Add photos" type="outline" disabled={images.length >= 5} onPress={() => void pickTaskImages(5 - images.length).then((picked) => setImages((all) => [...all, ...picked])).catch((error) => Alert.alert('Photo unavailable', error.message))} />
-    <Button title="Post task" size="lg" loading={busy} onPress={() => void submit()} style={{ marginTop: 18 }} />
+  return <Screen topInset={false}>
+    <FadeIn><Text style={styles.eyebrow}>TELL US WHAT YOU NEED</Text><Text style={styles.title}>A clear task gets better offers.</Text><Text style={styles.copy}>Your draft saves automatically. Exact location stays private until you select a provider.</Text></FadeIn>
+    <FadeIn delay={60}><Card variant="glass" style={styles.section}>
+      <Text style={styles.label}>SERVICE</Text><View style={styles.categories}>{categories.data?.map((category) => <TactilePressable key={category.id} onPress={() => update('categoryId', category.id)} style={[styles.chip, draft.categoryId === category.id && styles.active]}><Text style={[styles.chipText, draft.categoryId === category.id && styles.activeText]}>{category.name_en}</Text></TactilePressable>)}</View>
+      <Input label="Short title" value={draft.title} onChangeText={(value) => update('title', value)} placeholder="Leaking kitchen sink" maxLength={120} />
+      <Input label="Describe the work" value={draft.description} onChangeText={(value) => update('description', value)} multiline numberOfLines={5} maxLength={2000} />
+      <Input label="Budget in PKR (optional)" value={draft.budget} onChangeText={(value) => update('budget', value.replace(/\D/g, ''))} keyboardType="number-pad" />
+    </Card></FadeIn>
+    <FadeIn delay={100}><Card style={styles.section}>
+      <View style={styles.sectionHeading}><View style={styles.sectionIcon}><MapPin color={Theme.colors.primary} size={21} /></View><View><Text style={styles.sectionTitle}>Task location</Text><Text style={styles.sectionCopy}>Revealed only after provider selection.</Text></View></View>
+      <Button title="Use my current location" type="outline" icon={<MapPin color={Theme.colors.primary} size={18} />} onPress={() => void locate()} />
+      <View style={styles.locationFields}><Input label="Exact address (private until selection)" value={draft.address} onChangeText={(value) => update('address', value)} /><Input label="Area / locality" value={draft.area} onChangeText={(value) => update('area', value)} /><Input label="City" value={draft.city} onChangeText={(value) => update('city', value)} /></View>
+    </Card></FadeIn>
+    <FadeIn delay={140}><Card style={styles.section}>
+      <View style={styles.sectionHeading}><View style={styles.sectionIcon}><Camera color={Theme.colors.primary} size={21} /></View><View><Text style={styles.sectionTitle}>Photos</Text><Text style={styles.sectionCopy}>{images.length}/5 added · location metadata is removed.</Text></View></View>
+      <View style={styles.images}>{images.map((image) => <Image key={image.uri} source={{ uri: image.uri }} style={styles.image} />)}</View>
+      <Button title="Add photos" type="outline" disabled={images.length >= 5} onPress={() => void pickTaskImages(5 - images.length).then((picked) => setImages((all) => [...all, ...picked])).catch((error) => Alert.alert('Photo unavailable', error.message))} />
+    </Card></FadeIn>
+    <FadeIn delay={180}><Button title="Post task" size="lg" loading={busy} onPress={() => void submit()} style={styles.submit} /></FadeIn>
   </Screen>;
 }
-const styles = StyleSheet.create({ label: { ...Theme.typography.overline, color: Theme.colors.textSecondary, marginVertical: 10 }, categories: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }, chip: { backgroundColor: '#fff', paddingHorizontal: 12, paddingVertical: 9, borderRadius: 20, borderWidth: 1, borderColor: Theme.colors.border }, active: { backgroundColor: '#E7F8F3', borderColor: Theme.colors.primary }, activeText: { color: Theme.colors.primary, fontWeight: '700' }, images: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, image: { width: 72, height: 72, borderRadius: 10 } });
+const styles = StyleSheet.create({ eyebrow: { ...Theme.typography.overline, color: Theme.colors.primary }, title: { ...Theme.typography.h1, color: Theme.colors.textPrimary, marginTop: 4 }, copy: { ...Theme.typography.body, color: Theme.colors.textSecondary, marginTop: 8, marginBottom: Theme.spacing.xl }, section: { padding: Theme.spacing.xl, marginBottom: Theme.spacing.md }, label: { ...Theme.typography.overline, color: Theme.colors.textTertiary, marginBottom: 10 }, categories: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: Theme.spacing.xl }, chip: { backgroundColor: Theme.colors.surfaceMuted, paddingHorizontal: 13, paddingVertical: 10, borderRadius: Theme.radius.full, borderWidth: 1, borderColor: Theme.colors.border }, chipText: { ...Theme.typography.caption, color: Theme.colors.textSecondary, fontWeight: '600' }, active: { backgroundColor: Theme.colors.primaryMist, borderColor: 'rgba(7,94,84,0.35)' }, activeText: { color: Theme.colors.primary, fontWeight: '700' }, sectionHeading: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: Theme.spacing.lg }, sectionIcon: { width: 43, height: 43, borderRadius: 15, backgroundColor: Theme.colors.primaryMist, alignItems: 'center', justifyContent: 'center' }, sectionTitle: { ...Theme.typography.h3, color: Theme.colors.textPrimary }, sectionCopy: { ...Theme.typography.caption, color: Theme.colors.textSecondary, marginTop: 2 }, locationFields: { marginTop: Theme.spacing.xl }, images: { flexDirection: 'row', flexWrap: 'wrap', gap: 9, marginBottom: Theme.spacing.md }, image: { width: 76, height: 76, borderRadius: Theme.radius.md }, submit: { marginTop: Theme.spacing.sm } });

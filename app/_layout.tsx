@@ -18,7 +18,7 @@ function RootLayout() {
   return (
     <AppProviders>
       <StatusBar style="auto" />
-      <Stack screenOptions={{ headerStyle: { backgroundColor: Theme.colors.primary }, headerTintColor: '#fff' }}>
+      <Stack screenOptions={{ animation: 'fade', contentStyle: { backgroundColor: Theme.colors.background }, headerShadowVisible: false }}>
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(customer)" options={{ headerShown: false }} />

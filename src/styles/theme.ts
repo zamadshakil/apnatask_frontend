@@ -1,183 +1,113 @@
-// src/styles/theme.ts — ApnaTask Design System
-// Inspired by WhatsApp, Instagram, YouTube, Indrive brand aesthetics
+import { Platform } from 'react-native';
+
+const systemFont = Platform.select({
+  ios: 'System',
+  android: 'sans-serif',
+  web: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+});
 
 export const Theme = {
   colors: {
-    // Primary Brand Palette — Emerald Green
     primary: '#075E54',
     primaryLight: '#128C7E',
-    primaryDark: '#054D44',
+    primaryDark: '#04483F',
+    primaryMist: '#E7F4F1',
     accent: '#25D366',
-    accentLight: '#34EB7A',
+    accentLight: '#54DF8A',
 
-    // Dark Slate Palette
-    darkSlate: '#1F2C34',
-    darkSlateLight: '#2A3942',
-    darkSlateMedium: '#233138',
+    darkSlate: '#182723',
+    darkSlateLight: '#263A34',
+    darkSlateMedium: '#21332E',
 
-    // Neutrals
-    background: '#F0F2F5',
-    backgroundDark: '#ECE5DD',
+    background: '#F3F6F5',
+    backgroundDark: '#E7ECEA',
     surface: '#FFFFFF',
-    surfaceElevated: '#FAFAFA',
+    surfaceElevated: '#FBFCFC',
+    surfaceMuted: '#EDF2F0',
+    surfaceGlass: 'rgba(255,255,255,0.78)',
+    surfaceGlassStrong: 'rgba(255,255,255,0.92)',
     white: '#FFFFFF',
 
-    // Chat Colors
-    chatBubbleSent: '#DCF8C6',
+    chatBubbleSent: '#DDF5EA',
     chatBubbleReceived: '#FFFFFF',
-    chatBackground: '#E5DDD5',
+    chatBackground: '#EDF2F0',
 
-    // Text Colors
-    textPrimary: '#111B21',
-    textSecondary: '#667781',
-    textTertiary: '#8696A0',
+    textPrimary: '#13211E',
+    textSecondary: '#5F716C',
+    textTertiary: '#879590',
     textOnPrimary: '#FFFFFF',
-    textOnDark: '#E9EDEF',
-    textDark: '#1F2C34',
-    textLight: '#8696A0',
+    textOnDark: '#F2F7F5',
+    textDark: '#182723',
+    textLight: '#879590',
 
-    // Semantic Colors
     success: '#25D366',
-    successDark: '#1DAA53',
-    error: '#EA0038',
-    errorLight: '#FFEBEE',
-    warning: '#F7C948',
-    warningLight: '#FFF8E1',
-    info: '#039BE5',
+    successDark: '#16884B',
+    error: '#D92D4F',
+    errorLight: '#FFF0F3',
+    warning: '#E9AF28',
+    warningLight: '#FFF8E8',
+    info: '#2188D9',
 
-    // Borders & Dividers
-    border: '#E1E8ED',
-    borderLight: '#F0F2F5',
-    divider: '#E9EDEF',
+    border: '#DCE5E2',
+    borderLight: '#EAF0EE',
+    glassBorder: 'rgba(255,255,255,0.72)',
+    divider: '#E6ECEA',
 
-    // Wallet / Money
-    moneyGreen: '#00C853',
-    moneyGold: '#FFB300',
-
-    // Badge / Status
+    moneyGreen: '#0F8A55',
+    moneyGold: '#C88712',
     online: '#25D366',
-    offline: '#8696A0',
-    verified: '#039BE5',
-    pending: '#F7C948',
+    offline: '#879590',
+    verified: '#2188D9',
+    pending: '#E9AF28',
   },
 
-  // Typography
   typography: {
-    h1: {
-      fontSize: 28,
-      fontWeight: '700' as const,
-      letterSpacing: -0.5,
-      lineHeight: 34,
-    },
-    h2: {
-      fontSize: 22,
-      fontWeight: '700' as const,
-      letterSpacing: -0.3,
-      lineHeight: 28,
-    },
-    h3: {
-      fontSize: 18,
-      fontWeight: '600' as const,
-      letterSpacing: 0,
-      lineHeight: 24,
-    },
-    body: {
-      fontSize: 16,
-      fontWeight: '400' as const,
-      letterSpacing: 0.15,
-      lineHeight: 22,
-    },
-    bodySmall: {
-      fontSize: 14,
-      fontWeight: '400' as const,
-      letterSpacing: 0.1,
-      lineHeight: 20,
-    },
-    caption: {
-      fontSize: 12,
-      fontWeight: '400' as const,
-      letterSpacing: 0.4,
-      lineHeight: 16,
-    },
-    button: {
-      fontSize: 16,
-      fontWeight: '600' as const,
-      letterSpacing: 0.5,
-      lineHeight: 20,
-    },
-    overline: {
-      fontSize: 11,
-      fontWeight: '600' as const,
-      letterSpacing: 1.5,
-      lineHeight: 16,
-      textTransform: 'uppercase' as const,
-    },
+    display: { fontFamily: systemFont, fontSize: 36, fontWeight: '700' as const, letterSpacing: -1.15, lineHeight: 42 },
+    h1: { fontFamily: systemFont, fontSize: 30, fontWeight: '700' as const, letterSpacing: -0.8, lineHeight: 36 },
+    h2: { fontFamily: systemFont, fontSize: 23, fontWeight: '700' as const, letterSpacing: -0.45, lineHeight: 29 },
+    h3: { fontFamily: systemFont, fontSize: 18, fontWeight: '600' as const, letterSpacing: -0.15, lineHeight: 24 },
+    body: { fontFamily: systemFont, fontSize: 16, fontWeight: '400' as const, letterSpacing: -0.1, lineHeight: 23 },
+    bodySmall: { fontFamily: systemFont, fontSize: 14, fontWeight: '400' as const, letterSpacing: -0.05, lineHeight: 20 },
+    caption: { fontFamily: systemFont, fontSize: 12, fontWeight: '500' as const, letterSpacing: 0.05, lineHeight: 16 },
+    metadata: { fontFamily: systemFont, fontSize: 11, fontWeight: '600' as const, letterSpacing: 0.2, lineHeight: 15 },
+    button: { fontFamily: systemFont, fontSize: 16, fontWeight: '600' as const, letterSpacing: -0.1, lineHeight: 20 },
+    overline: { fontFamily: systemFont, fontSize: 11, fontWeight: '700' as const, letterSpacing: 1.15, lineHeight: 16, textTransform: 'uppercase' as const },
   },
 
-  // Spacing Scale (4px base)
-  spacing: {
-    xs: 4,
-    sm: 8,
-    md: 12,
-    lg: 16,
-    xl: 20,
-    xxl: 24,
-    xxxl: 32,
-    section: 40,
-  },
+  spacing: { xxs: 2, xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32, section: 40, hero: 48 },
+  radius: { xs: 8, sm: 12, md: 16, lg: 20, xl: 24, xxl: 30, sheet: 34, full: 999 },
 
-  // Border Radius
-  radius: {
-    xs: 4,
-    sm: 8,
-    md: 12,
-    lg: 16,
-    xl: 20,
-    xxl: 24,
-    full: 999,
-  },
-
-  // Shadows
   shadows: {
-    sm: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.08,
-      shadowRadius: 2,
-      elevation: 1,
-    },
-    md: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.12,
-      shadowRadius: 4,
-      elevation: 3,
-    },
-    lg: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.15,
-      shadowRadius: 8,
-      elevation: 6,
-    },
-    xl: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.18,
-      shadowRadius: 16,
-      elevation: 10,
-    },
+    sm: { shadowColor: '#0B2D25', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
+    md: { shadowColor: '#0B2D25', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 },
+    lg: { shadowColor: '#0B2D25', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.11, shadowRadius: 24, elevation: 6 },
+    xl: { shadowColor: '#0B2D25', shadowOffset: { width: 0, height: 16 }, shadowOpacity: 0.13, shadowRadius: 34, elevation: 9 },
   },
 
-  // Gradients (as linear stops for React Native)
-  gradients: {
-    primary: ['#075E54', '#128C7E'],
-    primaryAccent: ['#075E54', '#25D366'],
-    dark: ['#1F2C34', '#2A3942'],
-    accent: ['#25D366', '#34EB7A'],
-    wallet: ['#00C853', '#25D366'],
-    sunset: ['#FF6F00', '#FFB300'],
+  webShadows: {
+    sm: '0 1px 5px rgba(7, 52, 42, 0.06)',
+    md: '0 6px 20px rgba(7, 52, 42, 0.09)',
+    lg: '0 14px 34px rgba(7, 52, 42, 0.12)',
+    xl: '0 20px 46px rgba(7, 52, 42, 0.14)',
   },
-};
+
+  motion: {
+    quick: 140,
+    standard: 240,
+    sheet: 360,
+    spring: { damping: 18, stiffness: 220, mass: 0.8 },
+    gentleSpring: { damping: 20, stiffness: 150, mass: 0.9 },
+  },
+
+  gradients: {
+    primary: ['#075E54', '#0A7164'],
+    primaryAccent: ['#075E54', '#14947F'],
+    dark: ['#182723', '#263A34'],
+    accent: ['#25D366', '#54DF8A'],
+    wallet: ['#0F8A55', '#25D366'],
+    sunset: ['#E38B24', '#F4C45C'],
+    hero: ['#075E54', '#0A6B60', '#128C7E'],
+  },
+} as const;
 
 export const theme = Theme;
