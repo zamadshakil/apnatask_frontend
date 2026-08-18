@@ -31,6 +31,11 @@ const websocketBaseUrl = androidEmulatorHost(
   requiredPublicValue('EXPO_PUBLIC_WS_BASE_URL', 'ws://localhost:8000'),
 ).replace(/\/$/, '');
 
+const mapboxToken = requiredPublicValue('EXPO_PUBLIC_MAPBOX_TOKEN', 'development-mapbox-token');
+const mapboxConfigured =
+  Boolean(mapboxToken.trim()) &&
+  mapboxToken !== 'development-mapbox-token';
+
 if (isProduction && (!apiBaseUrl.startsWith('https://') || !websocketBaseUrl.startsWith('wss://'))) {
   throw new Error('Production API and realtime endpoints must use HTTPS/WSS');
 }
@@ -42,7 +47,7 @@ export const runtime = Object.freeze({
   websocketBaseUrl,
   supabaseUrl: requiredPublicValue('EXPO_PUBLIC_SUPABASE_URL', 'http://localhost:54321'),
   supabaseAnonKey: requiredPublicValue('EXPO_PUBLIC_SUPABASE_ANON_KEY', 'development-anon-key'),
-  mapboxToken: requiredPublicValue('EXPO_PUBLIC_MAPBOX_TOKEN', 'development-mapbox-token'),
-  mapboxConfigured: Boolean(process.env.EXPO_PUBLIC_MAPBOX_TOKEN?.trim()),
+  mapboxToken,
+  mapboxConfigured,
   sentryDsn: process.env.EXPO_PUBLIC_SENTRY_DSN?.trim() || undefined,
 });

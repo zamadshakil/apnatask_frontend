@@ -415,6 +415,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/providers/{provider_id}/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Provider Reviews */
+        get: operations["list_provider_reviews_api_v2_providers__provider_id__reviews_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/reports": {
         parameters: {
             query?: never;
@@ -705,6 +722,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/admin/bookings/verification-queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Verification Queue */
+        get: operations["list_verification_queue_api_v2_admin_bookings_verification_queue_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/admin/bookings/{booking_id}/verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decide Booking Verification */
+        post: operations["decide_booking_verification_api_v2_admin_bookings__booking_id__verification_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/admin/audit-logs": {
         parameters: {
             query?: never;
@@ -714,30 +765,6 @@ export interface paths {
         };
         /** List Audit Logs */
         get: operations["list_audit_logs_api_v2_admin_audit_logs_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Root Health Check
-         * @description Comprehensive health check route to verify status of:
-         *     - FastAPI app initialization
-         *     - PostgreSQL/PostGIS database connection
-         *     - Redis connection
-         *     - RabbitMQ (Celery Broker) connection
-         */
-        get: operations["root_health_check__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -873,6 +900,10 @@ export interface components {
             expires_at: string;
             /** Selected Provider Id */
             selected_provider_id: string | null;
+            /** Verification Status */
+            verification_status: string;
+            /** Verification Score */
+            verification_score: number;
             exact_address?: components["schemas"]["AddressInput"] | null;
             /** Customer Phone */
             customer_phone?: string | null;
@@ -886,6 +917,16 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** BookingVerificationDecisionRequest */
+        BookingVerificationDecisionRequest: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "approve" | "reject" | "request_changes";
+            /** Reason */
+            reason: string;
         };
         /** CategoryResponse */
         CategoryResponse: {
@@ -1073,6 +1114,33 @@ export interface components {
              */
             service_radius_km: number;
         };
+        /** ProviderReviewItem */
+        ProviderReviewItem: {
+            /** Review Id */
+            review_id: string;
+            /** Reviewer Id */
+            reviewer_id: string;
+            /** Rating */
+            rating: number;
+            /** Comment */
+            comment?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** ProviderReviewResponse */
+        ProviderReviewResponse: {
+            /** Provider Id */
+            provider_id: string;
+            /** Rating Average */
+            rating_average: number;
+            /** Rating Count */
+            rating_count: number;
+            /** Reviews */
+            reviews?: components["schemas"]["ProviderReviewItem"][];
+        };
         /** RealtimeTicketResponse */
         RealtimeTicketResponse: {
             /** Ticket */
@@ -1204,10 +1272,7 @@ export interface components {
             provider_id?: string | null;
             /** Provider Kyc Status */
             provider_kyc_status?: string | null;
-            /**
-             * Capabilities
-             * @default []
-             */
+            /** Capabilities */
             capabilities: string[];
         };
         /** ValidationError */
@@ -1582,6 +1647,7 @@ export interface operations {
                 category_id?: string | null;
                 radius_km?: number | null;
                 limit?: number;
+                search?: string | null;
             };
             header?: never;
             path?: never;
@@ -2080,6 +2146,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_provider_reviews_api_v2_providers__provider_id__reviews_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                provider_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderReviewResponse"];
                 };
             };
             /** @description Validation Error */
@@ -2656,9 +2755,10 @@ export interface operations {
             };
         };
     };
-    list_audit_logs_api_v2_admin_audit_logs_get: {
+    list_verification_queue_api_v2_admin_bookings_verification_queue_get: {
         parameters: {
             query?: {
+                verification_status?: string;
                 limit?: number;
             };
             header?: never;
@@ -2687,9 +2787,48 @@ export interface operations {
             };
         };
     };
-    root_health_check__get: {
+    decide_booking_verification_api_v2_admin_bookings__booking_id__verification_post: {
         parameters: {
             query?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookingVerificationDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_audit_logs_api_v2_admin_audit_logs_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -2703,6 +2842,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

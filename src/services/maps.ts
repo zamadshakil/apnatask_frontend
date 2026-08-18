@@ -26,7 +26,9 @@ export const mapService: MapService = {
     const response = await fetch(
       `https://api.mapbox.com/search/geocode/v6/reverse?longitude=${longitude}&latitude=${latitude}&country=PK&access_token=${runtime.mapboxToken}`,
     );
-    if (!response.ok) throw new Error('Address lookup is unavailable. Select a place from the map search instead.');
+    if (!response.ok) {
+      return { latitude, longitude, address: '', area: '', city: '' };
+    }
     const json = await response.json() as {
       features?: Array<{ properties?: { full_address?: string; name?: string; context?: { place?: { name?: string }; neighborhood?: { name?: string } } } }>;
     };
@@ -45,7 +47,7 @@ export const mapService: MapService = {
     const response = await fetch(
       `https://api.mapbox.com/search/geocode/v6/forward?q=${encodeURIComponent(query)}&country=PK&limit=6&language=ur&access_token=${runtime.mapboxToken}`,
     );
-    if (!response.ok) throw new Error('Address search is unavailable.');
+    if (!response.ok) return [];
     const json = await response.json() as {
       features?: Array<{
         geometry: { coordinates: [number, number] };

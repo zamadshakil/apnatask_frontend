@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { BriefcaseBusiness, Clock3, MapPin, Navigation, Search } from 'lucide-react-native';
@@ -22,6 +22,12 @@ export default function JobsScreen() {
   const [categoryId, setCategoryId] = useState('');
   const [radiusKm, setRadiusKm] = useState('12');
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchDebounced, setSearchDebounced] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setSearchDebounced(searchTerm), 250);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
   const categories = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
@@ -31,24 +37,19 @@ export default function JobsScreen() {
     },
   });
   const query = useQuery({
-    queryKey: ['provider-jobs', categoryId, radiusKm, searchTerm],
+    queryKey: ['provider-jobs', categoryId, radiusKm, searchDebounced],
     queryFn: async () => {
       const requestRadius = Number(radiusKm);
       const params: { category_id?: string; radius_km?: number; search?: string } = {};
       if (categoryId) params.category_id = categoryId;
-      if (Number.isFinite(requestRadius)) params.radius_km = requestRadius;
-      if (searchTerm.trim()) params.search = searchTerm.trim();
+      if (Number.isFinite(requestRadius) && requestRadius >= 1) params.radius_km = requestRadius;
+      if (searchDebounced.trim()) params.search = searchDebounced.trim();
       const { data, error } = await typedApi.GET('/api/v2/jobs', { params: { query: params } });
       if (error) throw error;
       return ((data as { items?: Job[] })?.items ?? []);
     },
   });
-  const jobs = useMemo(() => {
-    const needle = searchTerm.trim().toLowerCase();
-    const list = query.data ?? [];
-    if (!needle) return list;
-    return list.filter((job) => `${job.title} ${job.description} ${job.approximate_area}`.toLowerCase().includes(needle));
-  }, [query.data, searchTerm]);
+  const jobs = useMemo(() => query.data ?? [], [query.data]);
   if (query.isLoading) return <StateView title="Finding nearby work…" loading />;
   if (query.isError) return <StateView title="Jobs unavailable" detail="Make sure location and availability are enabled." onRetry={() => query.refetch()} />;
   if (!categories.data?.length) return <StateView title="Categories unavailable" detail="Try again after refreshing." onRetry={() => categories.refetch()} />;
