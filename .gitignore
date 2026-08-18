@@ -9,6 +9,7 @@ yarn-error.log*
 .expo/
 dist/
 dist-web/
+dist-web-validation/
 web-build/
 
 # Xcode

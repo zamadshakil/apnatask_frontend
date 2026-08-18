@@ -1,0 +1,61 @@
+name: Client deploy
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        required: true
+        type: choice
+        options: [staging, production]
+      build_mobile:
+        description: Queue signed Android and iOS EAS builds
+        required: true
+        type: boolean
+        default: false
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: client-${{ inputs.environment }}
+  cancel-in-progress: false
+jobs:
+  deploy-web:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with: { node-version: 24, cache: npm }
+      - run: npm ci --legacy-peer-deps
+      - run: npx expo export --platform web --output-dir dist-web
+        env:
+          EXPO_PUBLIC_API_BASE_URL: ${{ vars.PUBLIC_API_BASE_URL }}
+          EXPO_PUBLIC_WS_BASE_URL: ${{ vars.PUBLIC_WS_BASE_URL }}
+          EXPO_PUBLIC_SUPABASE_URL: ${{ vars.PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
+          EXPO_PUBLIC_MAPBOX_TOKEN: ${{ secrets.PUBLIC_MAPBOX_TOKEN }}
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_WEB_DEPLOY_ROLE_ARN }}
+          aws-region: me-central-1
+          allowed-account-ids: ${{ vars.AWS_ACCOUNT_ID }}
+          role-session-name: apnatask-web-${{ github.run_id }}
+      - name: Publish versioned static export
+        run: |
+          aws s3 sync dist-web/ "s3://${{ vars.WEB_BUCKET }}/releases/${GITHUB_SHA}/" --only-show-errors
+          aws s3 sync dist-web/ "s3://${{ vars.WEB_BUCKET }}/" --delete --exclude "releases/*" --cache-control "public,max-age=3600" --only-show-errors
+          aws cloudfront create-invalidation --distribution-id "${{ vars.WEB_DISTRIBUTION_ID }}" --paths "/index.html" "/_expo/*"
+  mobile:
+    if: inputs.build_mobile
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with: { node-version: 24, cache: npm }
+      - run: npm ci --legacy-peer-deps
+      - uses: expo/expo-github-action@v9
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+          packager: npm
+      - run: eas build --platform all --profile ${{ inputs.environment == 'production' && 'production' || 'preview' }} --non-interactive --no-wait
