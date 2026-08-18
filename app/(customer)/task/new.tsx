@@ -1,5 +1,4 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import NetInfo from '@react-native-community/netinfo';
 import { useQuery } from '@tanstack/react-query';
 import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -9,6 +8,7 @@ import Button from '../../../src/components/Button';
 import Input from '../../../src/components/Input';
 import { Screen } from '../../../src/components/Screen';
 import { createIdempotencyKey, typedApi } from '../../../src/services/api';
+import { isOnline } from '../../../src/services/connectivity';
 import { mapService } from '../../../src/services/maps';
 import { pickTaskImages, PreparedImage, uploadImage } from '../../../src/services/uploads';
 import { Theme } from '../../../src/styles/theme';
@@ -26,10 +26,21 @@ export default function NewTaskScreen() {
   useEffect(() => { void AsyncStorage.getItem(DRAFT_KEY).then((saved) => { if (saved) setDraft((current) => ({ ...JSON.parse(saved) as Draft, categoryId: params.categoryId ?? (JSON.parse(saved) as Draft).categoryId ?? current.categoryId })); }); }, [params.categoryId]);
   useEffect(() => { const timeout = setTimeout(() => void AsyncStorage.setItem(DRAFT_KEY, JSON.stringify(draft)), 400); return () => clearTimeout(timeout); }, [draft]);
   const update = (key: keyof Draft, value: string | number) => setDraft((current) => ({ ...current, [key]: value }));
-  const locate = async () => { const permission = await Location.requestForegroundPermissionsAsync(); if (!permission.granted) return Alert.alert('Location denied', 'Enter the address, area, and city manually.'); const current = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }); const place = await mapService.reverse(current.coords); setDraft((value) => ({ ...value, ...place })); };
+  const locate = async () => {
+    try {
+      const permission = await Location.requestForegroundPermissionsAsync();
+      if (!permission.granted) return Alert.alert('Location denied', 'Allow location access so ApnaTask can pin the task safely.');
+      const current = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const place = await mapService.reverse(current.coords);
+      setDraft((value) => ({ ...value, ...place }));
+      if (!place.address) Alert.alert('Location pinned', 'Enter the exact address, area, and city to finish the local preview.');
+    } catch {
+      Alert.alert('Location unavailable', 'Check browser location permission and try again.');
+    }
+  };
   const submit = async () => {
     if (!draft.categoryId || draft.title.trim().length < 5 || draft.description.trim().length < 20 || !draft.address || !draft.area || !draft.city || draft.latitude == null || draft.longitude == null) return Alert.alert('More details needed', 'Select a category, add a clear title and description, and confirm a mapped location.');
-    const network = await NetInfo.fetch(); if (!network.isConnected || network.isInternetReachable === false) return Alert.alert('You are offline', 'Your draft is saved. Posting requires a confirmed connection.');
+    if (!(await isOnline())) return Alert.alert('You are offline', 'Your draft is saved. Posting requires a confirmed connection.');
     setBusy(true);
     try {
       const imageKeys = await Promise.all(images.map((image) => uploadImage(image, 'task')));

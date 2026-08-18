@@ -10,6 +10,9 @@ export interface MapService {
 
 export const mapService: MapService = {
   async reverse({ latitude, longitude }) {
+    if (!runtime.mapboxConfigured) {
+      return { latitude, longitude, address: '', area: '', city: '' };
+    }
     const response = await fetch(`https://api.mapbox.com/search/geocode/v6/reverse?longitude=${longitude}&latitude=${latitude}&country=PK&access_token=${runtime.mapboxToken}`);
     if (!response.ok) throw new Error('Address lookup is unavailable. Enter the address manually.');
     const json = await response.json() as { features?: Array<{ properties?: { full_address?: string; name?: string; context?: { place?: { name?: string }; neighborhood?: { name?: string } } } }> };
@@ -17,6 +20,7 @@ export const mapService: MapService = {
     return { latitude, longitude, address: place?.full_address ?? place?.name ?? '', area: place?.context?.neighborhood?.name ?? place?.name ?? '', city: place?.context?.place?.name ?? '' };
   },
   async search(query) {
+    if (!runtime.mapboxConfigured) return [];
     const response = await fetch(`https://api.mapbox.com/search/geocode/v6/forward?q=${encodeURIComponent(query)}&country=PK&limit=5&access_token=${runtime.mapboxToken}`);
     if (!response.ok) throw new Error('Address search is unavailable.');
     const json = await response.json() as { features?: Array<{ geometry: { coordinates: [number, number] }; properties?: { full_address?: string; name?: string; context?: { place?: { name?: string }; neighborhood?: { name?: string } } } }> };

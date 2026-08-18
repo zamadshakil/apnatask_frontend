@@ -1,16 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import NetInfo from '@react-native-community/netinfo';
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import { QueryClient, onlineManager } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import React from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './AuthProvider';
+import { subscribeToConnectivity } from '../services/connectivity';
 import '../i18n';
 
-onlineManager.setEventListener((setOnline) =>
-  NetInfo.addEventListener((state) => setOnline(Boolean(state.isConnected && state.isInternetReachable !== false))),
-);
+onlineManager.setEventListener(subscribeToConnectivity);
 
 const queryClient = new QueryClient({
   defaultOptions: {

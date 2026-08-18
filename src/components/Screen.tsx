@@ -1,13 +1,13 @@
-import NetInfo from '@react-native-community/netinfo';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Theme } from '../styles/theme';
+import { subscribeToConnectivity } from '../services/connectivity';
 import Button from './Button';
 
 export function Screen({ children, scroll = true, style }: React.PropsWithChildren<{ scroll?: boolean; style?: ViewStyle }>) {
   const [offline, setOffline] = useState(false);
-  useEffect(() => NetInfo.addEventListener((state) => setOffline(!state.isConnected || state.isInternetReachable === false)), []);
+  useEffect(() => subscribeToConnectivity((online) => setOffline(!online)), []);
   const content = <View style={[styles.content, style]}>{children}</View>;
   return (
     <SafeAreaView style={styles.safe} edges={['left', 'right', 'bottom']}>

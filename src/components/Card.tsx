@@ -1,6 +1,6 @@
 // src/components/Card.tsx — Premium card with shadow variants
 import React, { ReactNode } from 'react';
-import { StyleSheet, View, ViewStyle, TouchableOpacity, StyleProp } from 'react-native';
+import { Platform, StyleSheet, View, ViewStyle, TouchableOpacity, StyleProp } from 'react-native';
 import { Theme } from '../styles/theme';
 
 interface CardProps {
@@ -18,7 +18,8 @@ export default function Card({
   onPress,
   testID,
 }: CardProps) {
-  const shadowStyle = Theme.shadows[elevation];
+  const webShadows = { sm: '0 1px 2px rgba(0,0,0,0.08)', md: '0 2px 4px rgba(0,0,0,0.12)', lg: '0 4px 8px rgba(0,0,0,0.15)' } as const;
+  const shadowStyle = Platform.OS === 'web' ? { boxShadow: webShadows[elevation] } : Theme.shadows[elevation];
   const cardStyle = [styles.card, shadowStyle, style];
 
   if (onPress) {

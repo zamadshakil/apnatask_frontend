@@ -1,0 +1,38 @@
+project_id = "apnatask-local"
+
+[api]
+enabled = true
+port = 54321
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 17
+
+[studio]
+enabled = false
+
+[auth]
+enabled = true
+site_url = "http://localhost:8081"
+additional_redirect_urls = ["http://127.0.0.1:8081", "http://localhost:8081"]
+enable_signup = true
+
+[auth.sms]
+enable_signup = true
+enable_confirmations = false
+template = "Your ApnaTask code is {{ .Code }}"
+max_frequency = "1s"
+
+# Local development only. No SMS is sent and this configuration is never used
+# by staging or production Supabase projects.
+[auth.sms.test_otp]
+"923000000001" = "123456"
+
+# GoTrue requires a provider to enable the phone grant. Test numbers above are
+# intercepted locally and never reach this placeholder provider configuration.
+[auth.sms.twilio]
+enabled = true
+account_sid = "local-test-only"
+message_service_sid = "local-test-only"
+auth_token = "local-test-only"

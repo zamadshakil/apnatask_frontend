@@ -9,5 +9,11 @@
     "__tests__",
     "dist",
     "dist-web"
+  ],
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
   ]
 }

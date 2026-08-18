@@ -21,9 +21,12 @@ function androidEmulatorHost(url: string): string {
   return url.replace('://localhost', '://10.0.2.2').replace('://127.0.0.1', '://10.0.2.2');
 }
 
-const apiBaseUrl = androidEmulatorHost(
+const configuredApiBaseUrl = androidEmulatorHost(
   requiredPublicValue('EXPO_PUBLIC_API_BASE_URL', 'http://localhost:8000/api/v2'),
 ).replace(/\/$/, '');
+// Generated OpenAPI operations already contain the `/api/v2` prefix. Accept
+// older environment files that included it without producing a doubled path.
+const apiBaseUrl = configuredApiBaseUrl.replace(/\/api\/v2$/, '');
 const websocketBaseUrl = androidEmulatorHost(
   requiredPublicValue('EXPO_PUBLIC_WS_BASE_URL', 'ws://localhost:8000'),
 ).replace(/\/$/, '');
@@ -40,5 +43,6 @@ export const runtime = Object.freeze({
   supabaseUrl: requiredPublicValue('EXPO_PUBLIC_SUPABASE_URL', 'http://localhost:54321'),
   supabaseAnonKey: requiredPublicValue('EXPO_PUBLIC_SUPABASE_ANON_KEY', 'development-anon-key'),
   mapboxToken: requiredPublicValue('EXPO_PUBLIC_MAPBOX_TOKEN', 'development-mapbox-token'),
+  mapboxConfigured: Boolean(process.env.EXPO_PUBLIC_MAPBOX_TOKEN?.trim()),
   sentryDsn: process.env.EXPO_PUBLIC_SENTRY_DSN?.trim() || undefined,
 });
