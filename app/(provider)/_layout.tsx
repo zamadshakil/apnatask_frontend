@@ -9,6 +9,7 @@ export default function ProviderLayout() {
       <Stack.Screen name="kyc" options={{ title: 'Identity verification' }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="job/[id]" options={{ title: 'Task offer' }} />
+      <Stack.Screen name="thread/[id]" options={{ title: 'Conversation' }} />
     </Stack>
   );
 }

@@ -26,7 +26,7 @@ export default function ProviderJob() {
     setBusy(false);
     if (error || !data) return Alert.alert('Offer not sent', 'The task may have expired or your credit floor may have been reached.');
     Alert.alert('Offer sent', data.charged_paisa ? `${formatPkr(data.charged_paisa)} was charged.` : 'No bid credit was charged.');
-    router.replace({ pathname: '/(customer)/thread/[id]', params: { id: data.thread_id } });
+    router.replace({ pathname: '/(provider)/thread/[id]', params: { id: data.thread_id } });
   };
   if (query.isLoading) return <StateView title="Loading task…" loading />;
   if (query.isError || !query.data) return <StateView title="Task unavailable" />;
