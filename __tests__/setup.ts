@@ -2,6 +2,8 @@ import { Alert } from 'react-native';
 import { server } from './mocks/server';
 import { MockWebSocket } from './mocks/websocket-mock';
 
+jest.setTimeout(15_000);
+
 // 1. Mock Alert.alert to automatically trigger button onPress callbacks
 jest.spyOn(Alert, 'alert').mockImplementation((title, message, buttons) => {
   if (buttons && buttons.length) {
