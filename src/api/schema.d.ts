@@ -864,6 +864,14 @@ export interface components {
             booking_id: string;
             /** Provider Id */
             provider_id: string;
+            /** Provider Display Name */
+            provider_display_name: string;
+            /** Provider Rating Average */
+            provider_rating_average: number;
+            /** Provider Rating Count */
+            provider_rating_count: number;
+            /** Provider Completed Jobs */
+            provider_completed_jobs: number;
             /** Amount Paisa */
             amount_paisa: number;
             /** Note */
@@ -1744,7 +1752,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["BidResponse"][];
                 };
             };
             /** @description Validation Error */

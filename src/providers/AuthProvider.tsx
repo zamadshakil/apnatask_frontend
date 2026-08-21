@@ -3,6 +3,7 @@ import type { components } from '../api/schema';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { typedApi } from '../services/api';
 import { supabase } from '../services/supabaseClient';
+import { runtime } from '../config/runtime';
 
 export type AppUser = components['schemas']['UserResponse'];
 
@@ -24,7 +25,7 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
   const [profileMissing, setProfileMissing] = useState(false);
 
   const loadProfile = useCallback(async (activeSession?: Session | null) => {
-    const current = activeSession ?? (await supabase.auth.getSession()).data.session;
+    const current = runtime.localAuthToken ? activeSession : activeSession ?? (await supabase.auth.getSession()).data.session;
     if (!current) {
       setUser(null);
       setProfileMissing(false);
@@ -43,6 +44,20 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
 
   useEffect(() => {
     let mounted = true;
+    if (runtime.localAuthToken) {
+      const localSession = {
+        access_token: runtime.localAuthToken,
+        refresh_token: '',
+        expires_in: 86_400,
+        token_type: 'bearer',
+        user: { id: 'local-development-user' },
+      } as Session;
+      setSession(localSession);
+      void loadProfile(localSession).finally(() => {
+        if (mounted) setLoading(false);
+      });
+      return () => { mounted = false; };
+    }
     void supabase.auth.getSession().then(async ({ data }) => {
       if (!mounted) return;
       setSession(data.session);
@@ -71,6 +86,11 @@ export function AuthProvider({ children }: React.PropsWithChildren) {
       profileMissing,
       refresh: () => loadProfile(session),
       signOut: async () => {
+        if (runtime.localAuthToken) {
+          setSession(null);
+          setUser(null);
+          return;
+        }
         await supabase.auth.signOut();
         setUser(null);
       },

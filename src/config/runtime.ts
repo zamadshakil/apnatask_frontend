@@ -8,6 +8,11 @@ const appVariant =
   ((process.env.APP_VARIANT as AppVariant | undefined) || 'development');
 
 const isProduction = appVariant === 'production';
+const localAuthToken = process.env.EXPO_PUBLIC_LOCAL_AUTH_TOKEN?.trim() || undefined;
+
+if (isProduction && localAuthToken) {
+  throw new Error('EXPO_PUBLIC_LOCAL_AUTH_TOKEN is forbidden in production');
+}
 
 function requiredPublicValue(name: string, fallback: string): string {
   const value = process.env[name]?.trim();
@@ -43,4 +48,5 @@ export const runtime = Object.freeze({
   supabaseUrl: requiredPublicValue('EXPO_PUBLIC_SUPABASE_URL', 'http://localhost:54321'),
   supabaseAnonKey: requiredPublicValue('EXPO_PUBLIC_SUPABASE_ANON_KEY', 'development-anon-key'),
   sentryDsn: process.env.EXPO_PUBLIC_SENTRY_DSN?.trim() || undefined,
+  localAuthToken,
 });

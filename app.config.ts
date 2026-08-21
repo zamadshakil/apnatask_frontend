@@ -17,6 +17,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   const suffix = isProduction ? '' : `.${variant}`;
   const appDomain = process.env.APP_DOMAIN ?? 'apnatask.pk';
   const projectId = process.env.EAS_PROJECT_ID;
+  const webOutput = process.env.EXPO_WEB_OUTPUT === 'static' ? 'static' : 'single';
 
   if (isProduction && process.env.EAS_BUILD && !projectId) {
     throw new Error('EAS_PROJECT_ID is required for production builds');
@@ -76,7 +77,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     web: {
       bundler: 'metro',
-      output: 'static',
+      // Authenticated dynamic routes must use a client app shell. A separate
+      // EXPO_WEB_OUTPUT=static build remains available for public SEO pages.
+      output: webOutput,
       favicon: './assets/favicon.png',
     },
     plugins: [

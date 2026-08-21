@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { BriefcaseBusiness, Clock3, MapPin, Navigation, Search } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -16,7 +16,7 @@ import { Theme } from '../../../src/styles/theme';
 import { formatPkr } from '../../../src/utils/format';
 
 type Category = { id: string; name_en: string };
-type Job = { id: string; title: string; description: string; budget_paisa: number | null; approximate_area: string; distance_km: number; expires_at: string };
+type Job = { id: string; title: string; description: string; budget_paisa: number | null; approximate_area: string; distance_km: number; expires_at: string; score: number; match_reason: string; matching_model: string; active_bid_count: number };
 
 export default function JobsScreen() {
   const [categoryId, setCategoryId] = useState('');
@@ -89,12 +89,13 @@ export default function JobsScreen() {
       </View>
       {jobs.length ? jobs.map((job, index) => (
         <FadeIn key={job.id} delay={60 + index * 45}>
-          <Card elevation="md" onPress={() => router.push({ pathname: '/(provider)/job/[id]', params: { id: job.id } })} style={styles.jobCard}>
+          <Card elevation="md" onPress={() => router.push(`/provider/job/${job.id}` as Href)} style={styles.jobCard}>
             <View style={styles.cardTop}><View style={styles.jobIcon}><BriefcaseBusiness color={Theme.colors.primary} size={21} /></View><Text style={styles.money}>{formatPkr(job.budget_paisa)}</Text></View>
             <Text style={styles.jobTitle}>{job.title}</Text>
             <Text numberOfLines={2} style={styles.description}>{job.description}</Text>
             <View style={styles.metaRow}><View style={styles.meta}><MapPin size={15} color={Theme.colors.textTertiary} /><Text style={styles.metaText}>{job.approximate_area}</Text></View><View style={styles.meta}><Navigation size={14} color={Theme.colors.textTertiary} /><Text style={styles.metaText}>{job.distance_km} km</Text></View></View>
-            <View style={styles.scoreRow}><Search size={14} color={Theme.colors.textTertiary} /><Text style={styles.scoreText}>Priority score: {Math.round(((job as { score?: number }).score ?? 0) * 100) / 100}</Text></View>
+            <View style={styles.scoreRow}><Search size={14} color={Theme.colors.primary} /><Text style={styles.scoreText}>{job.match_reason}</Text></View>
+            <Text style={styles.responseCount}>{job.active_bid_count ? `${job.active_bid_count} active offer${job.active_bid_count === 1 ? '' : 's'}` : 'Be the first provider to respond'}</Text>
             <View style={styles.expiry}><Clock3 size={14} color={Theme.colors.warning} /><Text style={styles.expiryText}>Open for a limited time</Text></View>
           </Card>
         </FadeIn>
@@ -121,7 +122,8 @@ const styles = StyleSheet.create({
   meta: { flexDirection: 'row', alignItems: 'center', gap: Theme.spacing.xs },
   metaText: { ...Theme.typography.caption, color: Theme.colors.textSecondary },
   scoreRow: { flexDirection: 'row', alignItems: 'center', gap: Theme.spacing.xs, marginTop: Theme.spacing.xs },
-  scoreText: { ...Theme.typography.caption, color: Theme.colors.textTertiary },
+  scoreText: { ...Theme.typography.caption, color: Theme.colors.primary, fontWeight: '600' },
+  responseCount: { ...Theme.typography.caption, color: Theme.colors.textTertiary, marginTop: 3 },
   expiry: { flexDirection: 'row', alignItems: 'center', gap: Theme.spacing.xs, marginTop: Theme.spacing.lg, paddingTop: Theme.spacing.md, borderTopWidth: 1, borderTopColor: Theme.colors.divider },
   expiryText: { ...Theme.typography.caption, color: Theme.colors.textSecondary },
 });

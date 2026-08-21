@@ -1,0 +1,42 @@
+name: Vercel web deploy
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        required: true
+        type: choice
+        options: [preview, production]
+permissions: { contents: read }
+concurrency:
+  group: client-vercel-${{ inputs.environment }}
+  cancel-in-progress: false
+jobs:
+  deploy-web:
+    runs-on: ubuntu-latest
+    environment: bootstrap
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with: { node-version: 24, cache: npm }
+      - run: npm ci --legacy-peer-deps
+      - name: Refuse a commercial production deploy on Hobby
+        if: inputs.environment == 'production'
+        shell: bash
+        env:
+          VERCEL_COMMERCIAL_PLAN: ${{ vars.VERCEL_COMMERCIAL_PLAN }}
+        run: test "$VERCEL_COMMERCIAL_PLAN" = "pro"
+      - name: Pull Vercel project settings
+        run: npx --yes vercel@59.3.0 pull --yes --environment=${{ inputs.environment }} --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      - name: Build with Vercel's resolved environment
+        run: npx --yes vercel@59.3.0 build ${{ inputs.environment == 'production' && '--prod' || '' }} --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      - name: Deploy immutable prebuilt output
+        run: npx --yes vercel@59.3.0 deploy --prebuilt ${{ inputs.environment == 'production' && '--prod' || '' }} --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}

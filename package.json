@@ -59,8 +59,7 @@
     "openapi-typescript": "^7.13.0",
     "react-native-worklets": "0.10.1",
     "react-test-renderer": "19.2.3",
-    "typescript": "~5.9.3",
-    "wrangler": "^4.125.0"
+    "typescript": "~5.9.3"
   },
   "scripts": {
     "start": "expo start",

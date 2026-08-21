@@ -7,6 +7,7 @@ import { supabase } from './supabaseClient';
 export const createIdempotencyKey = () => Crypto.randomUUID();
 
 async function accessToken(): Promise<string | undefined> {
+  if (runtime.localAuthToken) return runtime.localAuthToken;
   const { data, error } = await supabase.auth.getSession();
   if (error) throw error;
   return data.session?.access_token;

@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { Bell, BriefcaseBusiness, ChevronRight, Download, Headphones, LogOut, ShieldCheck, Trash2 } from 'lucide-react-native';
 import React from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
@@ -29,7 +29,7 @@ export default function AccountScreen() {
     <FadeIn delay={60}><Card variant="tinted" elevation="md" style={styles.profile}><View style={styles.avatar}><Text style={styles.avatarText}>{initials}</Text></View><View style={styles.profileCopy}><Text style={styles.name}>{user?.display_name}</Text><Text style={styles.phone}>{user?.phone}</Text></View><ShieldCheck color={Theme.colors.primary} size={22} /></Card></FadeIn>
 
     <FadeIn delay={100}><Text style={styles.sectionLabel}>WORK WITH APNATASK</Text><Card style={styles.group}>
-      <SettingsRow icon={BriefcaseBusiness} title={providerApproved ? 'Switch to provider' : 'Apply as a provider'} detail={providerApproved ? 'Your provider profile is approved.' : user?.provider_kyc_status ? `KYC status: ${user.provider_kyc_status}` : 'Offer services and earn from nearby work.'} onPress={() => router.push(providerApproved ? '/(provider)/(tabs)' : '/(provider)/apply')} />
+      <SettingsRow icon={BriefcaseBusiness} title={providerApproved ? 'Switch to provider' : 'Apply as a provider'} detail={providerApproved ? 'Your provider profile is approved.' : user?.provider_kyc_status ? `KYC status: ${user.provider_kyc_status}` : 'Offer services and earn from nearby work.'} onPress={() => router.push((providerApproved ? '/provider' : '/(provider)/apply') as Href)} />
       <View style={styles.divider} />
       <SettingsRow icon={Bell} title="Task notifications" detail="Offers, messages and work updates." onPress={() => void enablePushNotifications().then(() => Alert.alert('Notifications enabled')).catch((error) => Alert.alert('Could not enable notifications', error.message))} />
     </Card></FadeIn>

@@ -23,6 +23,7 @@ function RootLayout() {
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(customer)" options={{ headerShown: false }} />
         <Stack.Screen name="(provider)" options={{ headerShown: false }} />
+        <Stack.Screen name="provider" options={{ headerShown: false }} />
         <Stack.Screen name="(public)" options={{ headerShown: false }} />
       </Stack>
     </AppProviders>
