@@ -1,0 +1,40 @@
+name: Free Cloudflare Pages deploy
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        required: true
+        type: choice
+        options: [preview, production]
+permissions: { contents: read }
+concurrency:
+  group: client-cloudflare-${{ inputs.environment }}
+  cancel-in-progress: false
+jobs:
+  deploy-web:
+    runs-on: ubuntu-latest
+    environment: bootstrap
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with: { node-version: 24, cache: npm }
+      - run: npm ci --legacy-peer-deps
+      - name: Export static marketplace
+        run: npx expo export --platform web --output-dir dist-web
+        env:
+          APP_VARIANT: production
+          EXPO_PUBLIC_API_BASE_URL: ${{ vars.PUBLIC_API_BASE_URL }}
+          EXPO_PUBLIC_WS_BASE_URL: ${{ vars.PUBLIC_WS_BASE_URL }}
+          EXPO_PUBLIC_SUPABASE_URL: ${{ vars.PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
+      - name: Publish immutable Pages deployment
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PROJECT: ${{ vars.CLOUDFLARE_WEB_PROJECT }}
+          BRANCH: ${{ inputs.environment == 'production' && 'main' || 'preview' }}
+        run: |
+          set -euo pipefail
+          test -n "$PROJECT"
+          npx wrangler pages deploy dist-web --project-name "$PROJECT" --branch "$BRANCH"

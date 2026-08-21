@@ -1,4 +1,4 @@
-import { runtime } from '../config/runtime';
+import { typedApi } from './api';
 
 export interface Coordinates {
   latitude: number;
@@ -19,53 +19,20 @@ export interface MapService {
 
 export const mapService: MapService = {
   async reverse({ latitude, longitude }) {
-    if (!runtime.mapboxConfigured) {
+    const { data, error } = await typedApi.GET('/api/v2/locations/reverse', {
+      params: { query: { latitude, longitude } },
+    });
+    if (error || !data) {
       return { latitude, longitude, address: '', area: '', city: '' };
     }
-
-    const response = await fetch(
-      `https://api.mapbox.com/search/geocode/v6/reverse?longitude=${longitude}&latitude=${latitude}&country=PK&access_token=${runtime.mapboxToken}`,
-    );
-    if (!response.ok) {
-      return { latitude, longitude, address: '', area: '', city: '' };
-    }
-    const json = await response.json() as {
-      features?: Array<{ properties?: { full_address?: string; name?: string; context?: { place?: { name?: string }; neighborhood?: { name?: string } } } }>;
-    };
-    const place = json.features?.[0]?.properties;
-    return {
-      latitude,
-      longitude,
-      address: place?.full_address ?? place?.name ?? '',
-      area: place?.context?.neighborhood?.name ?? place?.name ?? '',
-      city: place?.context?.place?.name ?? '',
-      label: [place?.full_address, place?.context?.place?.name].filter(Boolean).join(', '),
-    };
+    return data;
   },
   async search(query) {
-    if (!runtime.mapboxConfigured) return [];
-    const response = await fetch(
-      `https://api.mapbox.com/search/geocode/v6/forward?q=${encodeURIComponent(query)}&country=PK&limit=6&language=ur&access_token=${runtime.mapboxToken}`,
-    );
-    if (!response.ok) return [];
-    const json = await response.json() as {
-      features?: Array<{
-        geometry: { coordinates: [number, number] };
-        properties?: { full_address?: string; name?: string; context?: { place?: { name?: string }; neighborhood?: { name?: string } } };
-      }>;
-    };
-    return (json.features ?? []).map((feature) => {
-      const address = feature.properties?.full_address ?? feature.properties?.name ?? '';
-      const neighborhood = feature.properties?.context?.neighborhood?.name ?? '';
-      const city = feature.properties?.context?.place?.name ?? '';
-      return {
-        longitude: feature.geometry.coordinates[0],
-        latitude: feature.geometry.coordinates[1],
-        address,
-        area: neighborhood || address,
-        city,
-        label: [address, neighborhood, city].filter(Boolean).join(' · '),
-      };
+    const normalized = query.trim();
+    if (normalized.length < 2) return [];
+    const { data, error } = await typedApi.GET('/api/v2/locations/search', {
+      params: { query: { query: normalized } },
     });
+    return error || !data ? [] : data;
   },
 };

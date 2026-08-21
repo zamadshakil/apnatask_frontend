@@ -32,7 +32,6 @@ jobs:
           EXPO_PUBLIC_WS_BASE_URL: ${{ vars.PUBLIC_WS_BASE_URL }}
           EXPO_PUBLIC_SUPABASE_URL: ${{ vars.PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
-          EXPO_PUBLIC_MAPBOX_TOKEN: ${{ secrets.PUBLIC_MAPBOX_TOKEN }}
       - uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ vars.AWS_WEB_DEPLOY_ROLE_ARN }}

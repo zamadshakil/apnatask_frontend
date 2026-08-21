@@ -21,5 +21,4 @@ jobs:
           EXPO_PUBLIC_WS_BASE_URL: wss://api.example.invalid
           EXPO_PUBLIC_SUPABASE_URL: https://example.supabase.co
           EXPO_PUBLIC_SUPABASE_ANON_KEY: build-validation-key
-          EXPO_PUBLIC_MAPBOX_TOKEN: build-validation-key
       - run: npm audit --omit=dev --audit-level=critical

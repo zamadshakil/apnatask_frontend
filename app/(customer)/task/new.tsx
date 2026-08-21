@@ -4,7 +4,7 @@ import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Camera, MapPin, Search } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Alert, Image, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Linking, StyleSheet, Text, View } from 'react-native';
 import Button from '../../../src/components/Button';
 import Card from '../../../src/components/Card';
 import Input from '../../../src/components/Input';
@@ -173,7 +173,7 @@ export default function NewTaskScreen() {
 
   return (
     <Screen topInset={false}>
-      <FadeIn><Text style={styles.eyebrow}>TELL US WHAT YOU NEED</Text><Text style={styles.title}>A clear task gets better offers.</Text><Text style={styles.copy}>Your draft saves automatically. Location is set through Mapbox and stays private until provider selection.</Text></FadeIn>
+      <FadeIn><Text style={styles.eyebrow}>TELL US WHAT YOU NEED</Text><Text style={styles.title}>A clear task gets better offers.</Text><Text style={styles.copy}>Your draft saves automatically. Location is set through private address search and stays private until provider selection.</Text></FadeIn>
       <FadeIn delay={60}>
         <Card variant="glass" style={styles.section}>
           <Text style={styles.label}>SERVICE</Text>
@@ -200,7 +200,7 @@ export default function NewTaskScreen() {
             <View style={styles.sectionIcon}><MapPin color={Theme.colors.primary} size={21} /></View>
             <View>
               <Text style={styles.sectionTitle}>Task location</Text>
-              <Text style={styles.sectionCopy}>Pick from Mapbox search or use current location.</Text>
+              <Text style={styles.sectionCopy}>Search across Pakistan or use current location.</Text>
             </View>
           </View>
           <Button title="Use my current location" type="outline" icon={<MapPin color={Theme.colors.primary} size={18} />} onPress={() => void locate()} />
@@ -225,6 +225,13 @@ export default function NewTaskScreen() {
               </TactilePressable>
             ))}
           </View>}
+          <Text
+            accessibilityRole="link"
+            style={styles.attribution}
+            onPress={() => void Linking.openURL('https://www.openstreetmap.org/copyright')}
+          >
+            Address data © OpenStreetMap contributors
+          </Text>
           <View style={styles.locationSelected}>
             <Text style={styles.locationTitle}>Chosen task location</Text>
             <Text style={styles.locationAddress} numberOfLines={2}>{locationLabel}</Text>
@@ -283,6 +290,7 @@ const styles = StyleSheet.create({
   resultRow: { padding: Theme.spacing.md, borderTopWidth: 1, borderTopColor: Theme.colors.divider },
   resultAddress: { ...Theme.typography.body, color: Theme.colors.textPrimary },
   resultMeta: { ...Theme.typography.caption, color: Theme.colors.textTertiary, marginTop: 4 },
+  attribution: { ...Theme.typography.caption, color: Theme.colors.textTertiary, marginTop: Theme.spacing.sm, textDecorationLine: 'underline' },
   locationSelected: { backgroundColor: Theme.colors.primaryMist, marginTop: Theme.spacing.md, borderRadius: Theme.radius.md, padding: Theme.spacing.md },
   locationTitle: { ...Theme.typography.overline, color: Theme.colors.textTertiary },
   locationAddress: { ...Theme.typography.body, color: Theme.colors.textPrimary, marginTop: 3 },

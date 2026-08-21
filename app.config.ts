@@ -18,7 +18,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   const appDomain = process.env.APP_DOMAIN ?? 'apnatask.pk';
   const projectId = process.env.EAS_PROJECT_ID;
 
-  if (isProduction && !projectId) {
+  if (isProduction && process.env.EAS_BUILD && !projectId) {
     throw new Error('EAS_PROJECT_ID is required for production builds');
   }
 
@@ -113,7 +113,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         'expo-notifications',
         { icon: './assets/android-icon-monochrome.png', color: '#059669' },
       ],
-      ['@rnmapbox/maps', { RNMapboxMapsVersion: '11.20.1' }],
       '@sentry/react-native',
     ],
     experiments: { typedRoutes: true },
