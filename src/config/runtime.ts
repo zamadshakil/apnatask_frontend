@@ -35,6 +35,11 @@ const apiBaseUrl = configuredApiBaseUrl.replace(/\/api\/v2$/, '');
 const websocketBaseUrl = androidEmulatorHost(
   requiredPublicValue('EXPO_PUBLIC_WS_BASE_URL', 'ws://localhost:8000'),
 ).replace(/\/$/, '');
+const configuredMapStyleUrl = process.env.EXPO_PUBLIC_MAP_STYLE_URL?.trim();
+
+if (isProduction && !configuredMapStyleUrl) {
+  throw new Error('EXPO_PUBLIC_MAP_STYLE_URL is required in production');
+}
 
 if (isProduction && (!apiBaseUrl.startsWith('https://') || !websocketBaseUrl.startsWith('wss://'))) {
   throw new Error('Production API and realtime endpoints must use HTTPS/WSS');
@@ -48,5 +53,8 @@ export const runtime = Object.freeze({
   supabaseUrl: requiredPublicValue('EXPO_PUBLIC_SUPABASE_URL', 'http://localhost:54321'),
   supabaseAnonKey: requiredPublicValue('EXPO_PUBLIC_SUPABASE_ANON_KEY', 'development-anon-key'),
   sentryDsn: process.env.EXPO_PUBLIC_SENTRY_DSN?.trim() || undefined,
+  // OpenFreeMap is the zero-cost bootstrap style. Production still sets this
+  // explicitly so it can move to a self-hosted style without a client release.
+  mapStyleUrl: configuredMapStyleUrl || 'https://tiles.openfreemap.org/styles/liberty',
   localAuthToken,
 });

@@ -7,6 +7,7 @@ import React, { useEffect, useState } from 'react';
 import { Alert, Image, Linking, StyleSheet, Text, View } from 'react-native';
 import Button from '../../../src/components/Button';
 import Card from '../../../src/components/Card';
+import DynamicMap from '../../../src/components/maps/DynamicMap';
 import Input from '../../../src/components/Input';
 import { FadeIn } from '../../../src/components/Motion';
 import { Screen } from '../../../src/components/Screen';
@@ -30,6 +31,7 @@ type Draft = {
   longitude?: number;
 };
 const empty: Draft = { categoryId: '', title: '', description: '', budget: '', address: '', area: '', city: '' };
+const PAKISTAN_CENTER = { latitude: 30.3753, longitude: 69.3451 };
 
 export default function NewTaskScreen() {
   const params = useLocalSearchParams<{ categoryId?: string }>();
@@ -39,6 +41,8 @@ export default function NewTaskScreen() {
   const [searching, setSearching] = useState(false);
   const [images, setImages] = useState<PreparedImage[]>([]);
   const [busy, setBusy] = useState(false);
+  const [resolvingPin, setResolvingPin] = useState(false);
+  const reverseRequest = React.useRef(0);
 
   const categories = useQuery({ queryKey: ['categories'], queryFn: async () => (await typedApi.GET('/api/v2/categories')).data ?? [], meta: { persist: true } });
 
@@ -118,7 +122,35 @@ export default function NewTaskScreen() {
     clearSearch();
   };
 
+  const movePin = async (coordinate: { latitude: number; longitude: number }) => {
+    const requestId = ++reverseRequest.current;
+    setResolvingPin(true);
+    setDraft((value) => ({ ...value, ...coordinate }));
+    try {
+      const place = await mapService.reverse(coordinate);
+      if (reverseRequest.current !== requestId) return;
+      if (!place.address || !place.city) throw new Error('No address returned for this pin');
+      setDraft((value) => ({
+        ...value,
+        address: place.address.trim(),
+        area: place.area.trim(),
+        city: place.city.trim(),
+        latitude: coordinate.latitude,
+        longitude: coordinate.longitude,
+      }));
+    } catch {
+      if (reverseRequest.current === requestId) {
+        Alert.alert('Address not found', 'Move the pin slightly or select a nearby search result.');
+      }
+    } finally {
+      if (reverseRequest.current === requestId) setResolvingPin(false);
+    }
+  };
+
   const submit = async () => {
+    if (resolvingPin) {
+      return Alert.alert('Confirming location', 'Wait a moment while we identify the address under the pin.');
+    }
     if (
       !draft.categoryId ||
       draft.title.trim().length < 5 ||
@@ -170,6 +202,9 @@ export default function NewTaskScreen() {
 
   const locationLabel = draft.address || 'No location selected';
   const locationMeta = [draft.area, draft.city].filter(Boolean).join(' · ');
+  const mapCenter = draft.latitude != null && draft.longitude != null
+    ? { latitude: draft.latitude, longitude: draft.longitude }
+    : PAKISTAN_CENTER;
 
   return (
     <Screen topInset={false}>
@@ -225,6 +260,18 @@ export default function NewTaskScreen() {
               </TactilePressable>
             ))}
           </View>}
+          <View style={styles.mapBlock}>
+            <View style={styles.mapHeading}>
+              <Text style={styles.mapTitle}>Move the map to position the pin</Text>
+              <Text style={styles.mapCopy}>The pin is the task location. Only the selected provider receives the exact point.</Text>
+            </View>
+            <DynamicMap
+              center={mapCenter}
+              mode="picker"
+              onCenterChange={(coordinate) => void movePin(coordinate)}
+              zoom={draft.latitude == null ? 5 : 15}
+            />
+          </View>
           <Text
             accessibilityRole="link"
             style={styles.attribution}
@@ -234,7 +281,7 @@ export default function NewTaskScreen() {
           </Text>
           <View style={styles.locationSelected}>
             <Text style={styles.locationTitle}>Chosen task location</Text>
-            <Text style={styles.locationAddress} numberOfLines={2}>{locationLabel}</Text>
+            <Text style={styles.locationAddress} numberOfLines={2}>{resolvingPin ? 'Finding address under the pin…' : locationLabel}</Text>
             {!!locationMeta && <Text style={styles.locationMeta}>{locationMeta}</Text>}
           </View>
         </Card>
@@ -290,6 +337,10 @@ const styles = StyleSheet.create({
   resultRow: { padding: Theme.spacing.md, borderTopWidth: 1, borderTopColor: Theme.colors.divider },
   resultAddress: { ...Theme.typography.body, color: Theme.colors.textPrimary },
   resultMeta: { ...Theme.typography.caption, color: Theme.colors.textTertiary, marginTop: 4 },
+  mapBlock: { marginTop: Theme.spacing.lg },
+  mapHeading: { marginBottom: Theme.spacing.sm },
+  mapTitle: { ...Theme.typography.bodySmall, color: Theme.colors.textPrimary, fontWeight: '700' },
+  mapCopy: { ...Theme.typography.caption, color: Theme.colors.textSecondary, marginTop: 3 },
   attribution: { ...Theme.typography.caption, color: Theme.colors.textTertiary, marginTop: Theme.spacing.sm, textDecorationLine: 'underline' },
   locationSelected: { backgroundColor: Theme.colors.primaryMist, marginTop: Theme.spacing.md, borderRadius: Theme.radius.md, padding: Theme.spacing.md },
   locationTitle: { ...Theme.typography.overline, color: Theme.colors.textTertiary },

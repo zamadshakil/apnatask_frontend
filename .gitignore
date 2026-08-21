@@ -12,6 +12,7 @@ dist-web/
 dist-web-validation/
 dist-local/
 dist-spa/
+dist-map-*/
 web-build/
 .playwright-cli/
 
