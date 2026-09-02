@@ -41,13 +41,19 @@ export default function PhoneAuthScreen() {
         return;
       }
       if (!sentTo) {
+        const emailRedirectTo = Platform.OS === 'web' && typeof window !== 'undefined'
+          ? `${window.location.origin}/`
+          : undefined;
         const result = emailMode
           ? await supabase.auth.signInWithOtp({
               email: destination,
               // Alpha identities are provisioned by invitation. Keeping account
               // creation off prevents a public URL from becoming a free-email
               // relay or consuming the shared Supabase auth quota.
-              options: { shouldCreateUser: runtime.appVariant !== 'alpha' },
+              options: {
+                shouldCreateUser: runtime.appVariant !== 'alpha',
+                emailRedirectTo,
+              },
             })
           : await supabase.auth.signInWithOtp({ phone: destination, options: { shouldCreateUser: true } });
         const { error } = result;
@@ -102,11 +108,9 @@ export default function PhoneAuthScreen() {
         )} /> : <Controller control={phoneForm.control} name="phone" render={({ field, fieldState }) => (
           <Input label={t('auth.phone')} keyboardType="phone-pad" placeholder={t('auth.phonePlaceholder')} editable={!sentTo} value={field.value} onChangeText={field.onChange} error={fieldState.error?.message} />
         )} />}
-        {sentTo && (emailMode ? <Controller control={emailForm.control} name="otp" render={({ field, fieldState }) => (
+        {sentTo && !emailMode && <Controller control={phoneForm.control} name="otp" render={({ field, fieldState }) => (
           <Input label={t('auth.otpLabel')} keyboardType="number-pad" maxLength={6} value={field.value} onChangeText={field.onChange} error={fieldState.error?.message} />
-        )} /> : <Controller control={phoneForm.control} name="otp" render={({ field, fieldState }) => (
-          <Input label={t('auth.otpLabel')} keyboardType="number-pad" maxLength={6} value={field.value} onChangeText={field.onChange} error={fieldState.error?.message} />
-        )} />)}
+        )} />}
         {feedback && (
           <Text
             accessibilityLiveRegion="polite"
@@ -116,7 +120,7 @@ export default function PhoneAuthScreen() {
             {feedback.message}
           </Text>
         )}
-        <Button title={runtime.localAuthToken ? t('auth.openPreview') : sentTo ? t('auth.verify') : t(emailMode ? 'auth.sendEmail' : 'auth.sendFull')} onPress={submit} loading={busy} size="lg" />
+        {(!sentTo || !emailMode) && <Button title={runtime.localAuthToken ? t('auth.openPreview') : sentTo ? t('auth.verify') : t(emailMode ? 'auth.sendEmail' : 'auth.sendFull')} onPress={submit} loading={busy} size="lg" />}
         {sentTo && <Button title={t('auth.different')} onPress={() => { setSentTo(null); setFeedback(null); }} type="outline" />}
         <View style={styles.termsRow}><ShieldCheck color={Theme.colors.textTertiary} size={15} /><Text style={styles.terms}>{t('auth.terms')}</Text></View>
       </Card></FadeIn>

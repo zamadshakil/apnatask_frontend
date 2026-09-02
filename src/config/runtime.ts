@@ -20,7 +20,7 @@ if (!['phone', 'email'].includes(authMode)) {
   throw new Error(`Unsupported EXPO_PUBLIC_AUTH_MODE: ${authMode}`);
 }
 if (appVariant === 'alpha' && authMode !== 'email') {
-  throw new Error('The zero-cost alpha must use email OTP authentication');
+  throw new Error('The zero-cost alpha must use email-link authentication');
 }
 if (isProduction && authMode !== 'phone') {
   throw new Error('Production must use phone authentication');

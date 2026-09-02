@@ -25,9 +25,10 @@ production deploy unless `VERCEL_COMMERCIAL_PLAN=pro` is configured. Required
 GitHub secrets are listed in the infrastructure repository's
 `FREE_BOOTSTRAP.md`.
 
-The `alpha` app variant uses invite-only Supabase email OTP because real phone
-SMS has a provider cost. Public production continues to require Pakistani phone
-verification; email alpha access is not a silent product-policy change.
+The `alpha` app variant uses invite-only Supabase email magic links because real
+phone SMS and custom transactional email have provider costs. Public production
+continues to require Pakistani phone verification; email alpha access is not a
+silent product-policy change.
 
 The authenticated marketplace uses Expo's single-page web output so provider
 and task URLs survive refreshes without server-rendered authentication state.

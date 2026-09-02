@@ -68,7 +68,10 @@ export const supabase = createClient(runtime.supabaseUrl, runtime.supabaseAnonKe
     storage: secureSessionStorage,
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: false,
+    // Supabase's free hosted mail uses a secure magic link. Web alpha builds
+    // exchange that PKCE callback automatically; production phone OTP never
+    // relies on URL-carried sessions.
+    detectSessionInUrl: Platform.OS === 'web' && runtime.appVariant === 'alpha',
     flowType: 'pkce',
   },
 });
