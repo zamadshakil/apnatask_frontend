@@ -1,6 +1,6 @@
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
-const variants = ['development', 'staging', 'production'] as const;
+const variants = ['development', 'alpha', 'staging', 'production'] as const;
 type Variant = (typeof variants)[number];
 
 function getVariant(): Variant {

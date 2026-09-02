@@ -1,28 +1,40 @@
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
-type AppVariant = 'development' | 'staging' | 'production';
+type AppVariant = 'development' | 'alpha' | 'staging' | 'production';
+type AuthMode = 'phone' | 'email';
 
 const appVariant =
   (Constants.expoConfig?.extra?.appVariant as AppVariant | undefined) ??
   ((process.env.APP_VARIANT as AppVariant | undefined) || 'development');
 
 const isProduction = appVariant === 'production';
+const isHosted = appVariant !== 'development';
 const localAuthToken = process.env.EXPO_PUBLIC_LOCAL_AUTH_TOKEN?.trim() || undefined;
+const authMode = (process.env.EXPO_PUBLIC_AUTH_MODE?.trim() || 'phone') as AuthMode;
 
-if (isProduction && localAuthToken) {
-  throw new Error('EXPO_PUBLIC_LOCAL_AUTH_TOKEN is forbidden in production');
+if (isHosted && localAuthToken) {
+  throw new Error('EXPO_PUBLIC_LOCAL_AUTH_TOKEN is forbidden in hosted builds');
+}
+if (!['phone', 'email'].includes(authMode)) {
+  throw new Error(`Unsupported EXPO_PUBLIC_AUTH_MODE: ${authMode}`);
+}
+if (appVariant === 'alpha' && authMode !== 'email') {
+  throw new Error('The zero-cost alpha must use email OTP authentication');
+}
+if (isProduction && authMode !== 'phone') {
+  throw new Error('Production must use phone authentication');
 }
 
 function requiredPublicValue(name: string, fallback: string): string {
   const value = process.env[name]?.trim();
   if (value) return value;
-  if (isProduction) throw new Error(`${name} is required in production`);
+  if (isHosted) throw new Error(`${name} is required in hosted builds`);
   return fallback;
 }
 
 function androidEmulatorHost(url: string): string {
-  if (Platform.OS !== 'android' || isProduction) return url;
+  if (Platform.OS !== 'android' || isHosted) return url;
   return url.replace('://localhost', '://10.0.2.2').replace('://127.0.0.1', '://10.0.2.2');
 }
 
@@ -40,23 +52,29 @@ const mapboxAccessToken = (
   process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || process.env.EXPO_PUBLIC_MAPBOX_TOKEN
 )?.trim();
 
+if (appVariant === 'alpha' && mapboxAccessToken) {
+  throw new Error('Mapbox tokens are forbidden in the zero-cost alpha');
+}
+
 if (isProduction && !mapboxAccessToken && !configuredMapStyleUrl) {
   throw new Error('EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN or EXPO_PUBLIC_MAP_STYLE_URL is required in production');
 }
 
-if (isProduction && (!apiBaseUrl.startsWith('https://') || !websocketBaseUrl.startsWith('wss://'))) {
-  throw new Error('Production API and realtime endpoints must use HTTPS/WSS');
+if (isHosted && (!apiBaseUrl.startsWith('https://') || !websocketBaseUrl.startsWith('wss://'))) {
+  throw new Error('Hosted API and realtime endpoints must use HTTPS/WSS');
 }
 
 export const runtime = Object.freeze({
   appVariant,
   isProduction,
+  isHosted,
+  authMode,
   apiBaseUrl,
   websocketBaseUrl,
   supabaseUrl: requiredPublicValue('EXPO_PUBLIC_SUPABASE_URL', 'http://localhost:54321'),
   supabaseAnonKey: requiredPublicValue('EXPO_PUBLIC_SUPABASE_ANON_KEY', 'development-anon-key'),
   sentryDsn: process.env.EXPO_PUBLIC_SENTRY_DSN?.trim() || undefined,
-  mapProvider: mapboxAccessToken ? 'mapbox' : 'development-fallback',
+  mapProvider: mapboxAccessToken ? 'mapbox' : 'openfreemap',
   // Mapbox's Static Tiles API is intentionally consumed through the existing
   // MapLibre renderer so one map interaction model works on web, iOS, and
   // Android. The public token must be URL/domain restricted in Mapbox.

@@ -4,7 +4,12 @@ import { Platform } from 'react-native';
 import { typedApi } from './api';
 
 export interface PreparedImage { uri: string; size: number; contentType: 'image/jpeg'; extension: 'jpg' }
-type UploadIntent = { object_key: string; upload: { url: string; fields: Record<string, string> } };
+type UploadIntent = {
+  object_key: string;
+  upload:
+    | { method: 'POST'; url: string; fields: Record<string, string> }
+    | { method: 'PUT'; url: string; headers: Record<string, string> };
+};
 
 export async function pickTaskImages(remaining: number): Promise<PreparedImage[]> {
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -23,6 +28,18 @@ export async function uploadImage(image: PreparedImage, purpose: 'task' | 'kyc' 
   const { data, error } = await typedApi.POST('/api/v2/uploads/intents', { body: { purpose, content_type: image.contentType, size_bytes: image.size, file_extension: image.extension } });
   if (error || !data) throw new Error('Could not prepare the secure upload.');
   const intent = data as UploadIntent;
+  if (intent.upload.method === 'PUT') {
+    const file = Platform.OS === 'web'
+      ? await fetch(image.uri).then((response) => response.blob())
+      : await fetch(image.uri).then((response) => response.blob());
+    const response = await fetch(intent.upload.url, {
+      method: 'PUT',
+      headers: intent.upload.headers,
+      body: file,
+    });
+    if (!response.ok) throw new Error('Image upload failed. No task was posted; please retry.');
+    return intent.object_key;
+  }
   const form = new FormData();
   Object.entries(intent.upload.fields).forEach(([key, value]) => form.append(key, value));
   if (Platform.OS === 'web') form.append('file', await fetch(image.uri).then((response) => response.blob()));

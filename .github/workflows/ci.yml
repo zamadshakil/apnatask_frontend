@@ -2,7 +2,7 @@ name: Client CI
 on:
   pull_request:
   push:
-    branches: [main, codex/production-ready]
+    branches: [main, codex/production-ready, codex/zero-cost-alpha]
 permissions: { contents: read }
 jobs:
   validate:

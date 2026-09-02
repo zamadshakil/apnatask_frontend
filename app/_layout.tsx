@@ -11,7 +11,21 @@ Sentry.init({
   enabled: Boolean(runtime.sentryDsn),
   environment: runtime.appVariant,
   sendDefaultPii: false,
-  tracesSampleRate: runtime.isProduction ? 0.1 : 1,
+  tracesSampleRate: runtime.isProduction ? 0.1 : runtime.isHosted ? 0.05 : 1,
+  beforeSend(event) {
+    if (event.request) {
+      delete event.request.data;
+      delete event.request.cookies;
+      delete event.request.headers;
+      if (event.request.url) event.request.url = event.request.url.split('?')[0];
+    }
+    event.breadcrumbs = event.breadcrumbs?.map((breadcrumb) => ({
+      ...breadcrumb,
+      message: breadcrumb.category === 'ui.click' ? 'UI interaction' : breadcrumb.message,
+      data: undefined,
+    }));
+    return event;
+  },
 });
 
 function RootLayout() {
