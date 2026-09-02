@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { ActivityIndicator, Platform, ScrollView, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Theme } from '../styles/theme';
 import { subscribeToConnectivity } from '../services/connectivity';
@@ -31,7 +31,7 @@ export function StateView({ title, detail, loading, onRetry }: { title: string; 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Theme.colors.background },
   scroll: { flexGrow: 1 },
-  content: { flex: 1, width: '100%', maxWidth: 760, alignSelf: 'center', paddingHorizontal: Theme.spacing.xl, paddingTop: Theme.spacing.lg, paddingBottom: Theme.spacing.hero },
+  content: { flex: 1, width: '100%', maxWidth: 760, minWidth: 0, alignSelf: 'center', paddingHorizontal: Theme.spacing.xl, paddingTop: Theme.spacing.lg, paddingBottom: Theme.spacing.hero, ...(Platform.OS === 'web' ? ({ boxSizing: 'border-box' } as ViewStyle) : null) },
   offline: { ...Theme.typography.caption, backgroundColor: Theme.colors.warningLight, color: Theme.colors.textPrimary, paddingVertical: 8, textAlign: 'center' },
   state: { flex: 1, minHeight: 240, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24 },
   stateTitle: { ...Theme.typography.h3, color: Theme.colors.textPrimary, textAlign: 'center' },

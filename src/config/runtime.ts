@@ -36,9 +36,12 @@ const websocketBaseUrl = androidEmulatorHost(
   requiredPublicValue('EXPO_PUBLIC_WS_BASE_URL', 'ws://localhost:8000'),
 ).replace(/\/$/, '');
 const configuredMapStyleUrl = process.env.EXPO_PUBLIC_MAP_STYLE_URL?.trim();
+const mapboxAccessToken = (
+  process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || process.env.EXPO_PUBLIC_MAPBOX_TOKEN
+)?.trim();
 
-if (isProduction && !configuredMapStyleUrl) {
-  throw new Error('EXPO_PUBLIC_MAP_STYLE_URL is required in production');
+if (isProduction && !mapboxAccessToken && !configuredMapStyleUrl) {
+  throw new Error('EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN or EXPO_PUBLIC_MAP_STYLE_URL is required in production');
 }
 
 if (isProduction && (!apiBaseUrl.startsWith('https://') || !websocketBaseUrl.startsWith('wss://'))) {
@@ -53,8 +56,21 @@ export const runtime = Object.freeze({
   supabaseUrl: requiredPublicValue('EXPO_PUBLIC_SUPABASE_URL', 'http://localhost:54321'),
   supabaseAnonKey: requiredPublicValue('EXPO_PUBLIC_SUPABASE_ANON_KEY', 'development-anon-key'),
   sentryDsn: process.env.EXPO_PUBLIC_SENTRY_DSN?.trim() || undefined,
-  // OpenFreeMap is the zero-cost bootstrap style. Production still sets this
-  // explicitly so it can move to a self-hosted style without a client release.
-  mapStyleUrl: configuredMapStyleUrl || 'https://tiles.openfreemap.org/styles/liberty',
+  mapProvider: mapboxAccessToken ? 'mapbox' : 'development-fallback',
+  // Mapbox's Static Tiles API is intentionally consumed through the existing
+  // MapLibre renderer so one map interaction model works on web, iOS, and
+  // Android. The public token must be URL/domain restricted in Mapbox.
+  mapStyleUrl: configuredMapStyleUrl || (mapboxAccessToken ? {
+    version: 8 as const,
+    sources: {
+      mapbox: {
+        type: 'raster' as const,
+        tiles: [`https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/512/{z}/{x}/{y}?access_token=${encodeURIComponent(mapboxAccessToken)}`],
+        tileSize: 512,
+        attribution: '© Mapbox © OpenStreetMap',
+      },
+    },
+    layers: [{ id: 'mapbox-streets', type: 'raster' as const, source: 'mapbox' }],
+  } : 'https://tiles.openfreemap.org/styles/liberty'),
   localAuthToken,
 });

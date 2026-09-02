@@ -5,6 +5,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { runtime } from '../../config/runtime';
 import { Theme } from '../../styles/theme';
 import type { DynamicMapProps } from './DynamicMap.types';
+import { useTranslation } from 'react-i18next';
 
 export default function DynamicMap({
   center,
@@ -16,6 +17,7 @@ export default function DynamicMap({
   selectedMarkerId,
   zoom = 13,
 }: DynamicMapProps) {
+  const { t } = useTranslation();
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
   const handleRegionChange = useCallback((event: Parameters<NonNullable<React.ComponentProps<typeof LibreMap>['onRegionDidChange']>>[0]) => {
@@ -47,14 +49,14 @@ export default function DynamicMap({
               onPress={() => onMarkerPress?.(marker.id)}
             >
               <View style={origin ? styles.origin : [styles.marker, selected && styles.markerSelected]}>
-                {!origin && <Text style={[styles.markerText, selected && styles.markerTextSelected]}>{marker.label || 'Task'}</Text>}
+                {!origin && <Text style={[styles.markerText, selected && styles.markerTextSelected]}>{marker.label || t('experience.map.marker')}</Text>}
               </View>
             </Marker>
           );
         })}
       </LibreMap>
-      {!ready && !failed && <View pointerEvents="none" style={styles.state}><ActivityIndicator color={Theme.colors.primary} /><Text style={styles.stateText}>Loading live map…</Text></View>}
-      {failed && <View style={styles.state}><Text style={styles.errorTitle}>Map unavailable</Text><Text style={styles.stateText}>Address search still works. Check the configured map style.</Text></View>}
+      {!ready && !failed && <View pointerEvents="none" style={styles.state}><ActivityIndicator color={Theme.colors.primary} /><Text style={styles.stateText}>{t('experience.map.loading')}</Text></View>}
+      {failed && <View style={styles.state}><Text style={styles.errorTitle}>{t('experience.map.unavailable')}</Text><Text style={styles.stateText}>{t('experience.map.searchWorks')}</Text></View>}
       {mode === 'picker' && <View pointerEvents="none" style={styles.pin}><MapPin size={42} color={Theme.colors.primary} fill="#FFFFFF" /></View>}
     </View>
   );

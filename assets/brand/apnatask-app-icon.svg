@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">ApnaTask app icon</title>
+  <desc id="desc">Two interlocking people form a protective letter A and doorway on a deep green field.</desc>
+  <rect width="1024" height="1024" fill="#082F2C"/>
+  <g transform="translate(154 142) scale(2.8)">
+    <path d="M64 209C69 177 78 127 95 98C102 87 114 83 125 88C133 91 140 92 147 91" fill="none" stroke="#0B6A62" stroke-width="36" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M48 207C62 176 82 140 104 117L127 96C134 88 145 86 153 93C158 97 162 104 166 110C180 136 188 171 188 207" fill="none" stroke="#F7F4EC" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M150 114C163 125 183 148 205 176C215 189 217 200 209 209" fill="none" stroke="#0B6A62" stroke-width="36" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="86" cy="44" r="21" fill="#F7F4EC"/>
+    <circle cx="171" cy="44" r="21" fill="#0B6A62"/>
+    <path d="M103 222V168C103 161 106 156 111 152L123 144C126 141 130 141 133 144L145 152C150 156 153 161 153 168V222Z" fill="#F7F4EC"/>
+  </g>
+</svg>

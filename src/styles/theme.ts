@@ -8,18 +8,18 @@ const systemFont = Platform.select({
 
 export const Theme = {
   colors: {
-    primary: '#075E54',
-    primaryLight: '#128C7E',
-    primaryDark: '#04483F',
-    primaryMist: '#E7F4F1',
-    accent: '#25D366',
-    accentLight: '#54DF8A',
+    primary: '#075B55',
+    primaryLight: '#0B7A70',
+    primaryDark: '#06443F',
+    primaryMist: '#E6F3EF',
+    accent: '#2CA58D',
+    accentLight: '#72D2C1',
 
     darkSlate: '#182723',
     darkSlateLight: '#263A34',
     darkSlateMedium: '#21332E',
 
-    background: '#F3F6F5',
+    background: '#F7F4EC',
     backgroundDark: '#E7ECEA',
     surface: '#FFFFFF',
     surfaceElevated: '#FBFCFC',
@@ -34,28 +34,28 @@ export const Theme = {
 
     textPrimary: '#13211E',
     textSecondary: '#5F716C',
-    textTertiary: '#879590',
+    textTertiary: '#5F716C',
     textOnPrimary: '#FFFFFF',
     textOnDark: '#F2F7F5',
     textDark: '#182723',
-    textLight: '#879590',
+    textLight: '#5F716C',
 
-    success: '#25D366',
-    successDark: '#16884B',
+    success: '#1F9D62',
+    successDark: '#167547',
     error: '#D92D4F',
     errorLight: '#FFF0F3',
     warning: '#E9AF28',
     warningLight: '#FFF8E8',
     info: '#2188D9',
 
-    border: '#DCE5E2',
+    border: '#DCE6E2',
     borderLight: '#EAF0EE',
     glassBorder: 'rgba(255,255,255,0.72)',
     divider: '#E6ECEA',
 
     moneyGreen: '#0F8A55',
     moneyGold: '#C88712',
-    online: '#25D366',
+    online: '#1F9D62',
     offline: '#879590',
     verified: '#2188D9',
     pending: '#E9AF28',
@@ -100,13 +100,13 @@ export const Theme = {
   },
 
   gradients: {
-    primary: ['#075E54', '#0A7164'],
-    primaryAccent: ['#075E54', '#14947F'],
+    primary: ['#075B55', '#0B7A70'],
+    primaryAccent: ['#075B55', '#2CA58D'],
     dark: ['#182723', '#263A34'],
-    accent: ['#25D366', '#54DF8A'],
-    wallet: ['#0F8A55', '#25D366'],
+    accent: ['#2CA58D', '#72D2C1'],
+    wallet: ['#0F8A55', '#2CA58D'],
     sunset: ['#E38B24', '#F4C45C'],
-    hero: ['#075E54', '#0A6B60', '#128C7E'],
+    hero: ['#082F2C', '#075B55', '#0B7A70'],
   },
 } as const;
 

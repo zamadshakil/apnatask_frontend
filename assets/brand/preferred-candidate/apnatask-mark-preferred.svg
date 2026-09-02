@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">ApnaTask preferred mark</title>
+  <desc id="desc">Two interlocking people form a protective letter A and doorway.</desc>
+  <defs>
+    <linearGradient id="green" x1="60" y1="64" x2="214" y2="224" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#087068"/>
+      <stop offset="1" stop-color="#004C47"/>
+    </linearGradient>
+    <linearGradient id="warm" x1="45" y1="47" x2="193" y2="220" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFDF8"/>
+      <stop offset="1" stop-color="#F1ECE2"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rear figure: the rising left shoulder and descending right ribbon. -->
+  <path
+    d="M64 209 C69 177 78 127 95 98 C102 87 114 83 125 88 C133 91 140 92 147 91"
+    fill="none"
+    stroke="url(#green)"
+    stroke-width="36"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- Front figure: a broad, softly peaked A/roof. -->
+  <path
+    d="M48 207 C62 176 82 140 104 117 L127 96 C134 88 145 86 153 93 C158 97 162 104 166 110 C180 136 188 171 188 207"
+    fill="none"
+    stroke="url(#warm)"
+    stroke-width="40"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- The right arm returns above the cream ribbon to create the woven hand-off. -->
+  <path
+    d="M150 114 C163 125 183 148 205 176 C215 189 217 200 209 209"
+    fill="none"
+    stroke="url(#green)"
+    stroke-width="36"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <circle cx="86" cy="44" r="21" fill="url(#warm)"/>
+  <circle cx="171" cy="44" r="21" fill="url(#green)"/>
+
+  <!-- Separate doorway keeps the home silhouette legible at launcher-icon sizes. -->
+  <path
+    d="M103 222 V168 C103 161 106 156 111 152 L123 144 C126 141 130 141 133 144 L145 152 C150 156 153 161 153 168 V222 Z"
+    fill="url(#warm)"
+  />
+</svg>

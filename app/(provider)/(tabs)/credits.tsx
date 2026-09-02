@@ -9,28 +9,29 @@ import { Screen, StateView } from '../../../src/components/Screen';
 import { typedApi } from '../../../src/services/api';
 import { Theme } from '../../../src/styles/theme';
 import { formatPkr } from '../../../src/utils/format';
+import i18n from '../../../src/i18n';
 
 export default function CreditsScreen() {
   const query = useQuery({ queryKey: ['credits'], queryFn: async () => { const { data, error } = await typedApi.GET('/api/v2/credits'); if (error || !data) throw error; return data; } });
-  if (query.isLoading) return <StateView title="Loading credits…" loading />;
-  if (query.isError || !query.data) return <StateView title="Credits unavailable" onRetry={() => query.refetch()} />;
+  if (query.isLoading) return <StateView title={i18n.t('experience.credits.loading')} loading />;
+  if (query.isError || !query.data) return <StateView title={i18n.t('experience.credits.unavailable')} onRetry={() => query.refetch()} />;
   const value = query.data;
   return (
     <Screen>
-      <FadeIn><Text style={styles.title}>Bid credits</Text><Text style={styles.subtitle}>A clear view of your promotional and purchased credit.</Text></FadeIn>
+      <FadeIn><Text style={styles.title}>{i18n.t('experience.credits.title')}</Text><Text style={styles.subtitle}>{i18n.t('experience.credits.subtitle')}</Text></FadeIn>
       <FadeIn delay={70}>
         <LinearGradient colors={[...Theme.gradients.wallet]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.wallet}>
-          <View style={styles.walletTop}><View><Text style={styles.walletLabel}>AVAILABLE CREDIT</Text><Text style={styles.total}>{formatPkr(value.total_paisa)}</Text></View><View style={styles.walletIcon}><WalletCards color={Theme.colors.white} size={25} /></View></View>
-          <View style={styles.split}><View><Text style={styles.splitLabel}>PROMOTIONAL</Text><Text style={styles.splitValue}>{formatPkr(value.promotional_paisa)}</Text></View><View style={styles.rule} /><View><Text style={styles.splitLabel}>PURCHASED</Text><Text style={styles.splitValue}>{formatPkr(value.purchased_paisa)}</Text></View></View>
+          <View style={styles.walletTop}><View><Text style={styles.walletLabel}>{i18n.t('experience.credits.available')}</Text><Text style={styles.total}>{formatPkr(value.total_paisa)}</Text></View><View style={styles.walletIcon}><WalletCards color={Theme.colors.white} size={25} /></View></View>
+          <View style={styles.split}><View><Text style={styles.splitLabel}>{i18n.t('experience.credits.promotional')}</Text><Text style={styles.splitValue}>{formatPkr(value.promotional_paisa)}</Text></View><View style={styles.rule} /><View><Text style={styles.splitLabel}>{i18n.t('experience.credits.purchased')}</Text><Text style={styles.splitValue}>{formatPkr(value.purchased_paisa)}</Text></View></View>
         </LinearGradient>
       </FadeIn>
       <FadeIn delay={130}>
         <Card elevation="md">
-          <View style={styles.infoHeading}><Coins color={Theme.colors.primary} size={21} /><Text style={styles.heading}>Bid pricing</Text></View>
-          <Text style={styles.body}>{value.paid_bids_enabled ? `${formatPkr(value.bid_fee_paisa)} for the first offer on a task. Revisions and chat are free.` : 'Bids are currently free. Charging starts only after advance notice and top-ups are operational.'}</Text>
-          <View style={styles.note}><ShieldCheck color={Theme.colors.successDark} size={17} /><Text style={styles.noteText}>Your balance may reach {formatPkr(value.floor_paisa)} before new bids are paused.</Text></View>
+          <View style={styles.infoHeading}><Coins color={Theme.colors.primary} size={21} /><Text style={styles.heading}>{i18n.t('experience.credits.pricing')}</Text></View>
+          <Text style={styles.body}>{value.paid_bids_enabled ? i18n.t('experience.credits.paidCopy', { fee: formatPkr(value.bid_fee_paisa) }) : i18n.t('experience.credits.freeCopy')}</Text>
+          <View style={styles.note}><ShieldCheck color={Theme.colors.successDark} size={17} /><Text style={styles.noteText}>{i18n.t('experience.credits.floor', { floor: formatPkr(value.floor_paisa) })}</Text></View>
         </Card>
-        <View style={styles.perks}><View style={styles.perk}><Gift color={Theme.colors.primary} size={18} /><Text style={styles.perkText}>Promotional credit expires</Text></View><View style={styles.perk}><Clock3 color={Theme.colors.primary} size={18} /><Text style={styles.perkText}>Purchased credit does not</Text></View></View>
+        <View style={styles.perks}><View style={styles.perk}><Gift color={Theme.colors.primary} size={18} /><Text style={styles.perkText}>{i18n.t('experience.credits.promoExpires')}</Text></View><View style={styles.perk}><Clock3 color={Theme.colors.primary} size={18} /><Text style={styles.perkText}>{i18n.t('experience.credits.purchasedLasts')}</Text></View></View>
       </FadeIn>
     </Screen>
   );

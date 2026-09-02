@@ -6,6 +6,7 @@ import { MapPin } from 'lucide-react-native';
 import { runtime } from '../../config/runtime';
 import { Theme } from '../../styles/theme';
 import type { DynamicMapProps } from './DynamicMap.types';
+import { useTranslation } from 'react-i18next';
 
 const PAKISTAN_BOUNDS: maplibregl.LngLatBoundsLike = [[60.5, 23], [77.5, 37.2]];
 
@@ -19,6 +20,7 @@ export default function DynamicMap({
   selectedMarkerId,
   zoom = 13,
 }: DynamicMapProps) {
+  const { t, i18n } = useTranslation();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRefs = useRef<maplibregl.Marker[]>([]);
@@ -41,6 +43,16 @@ export default function DynamicMap({
         maxBounds: PAKISTAN_BOUNDS,
         attributionControl: { compact: true },
         cooperativeGestures: true,
+        locale: {
+          'AttributionControl.ToggleAttribution': t('experience.map.toggleAttribution'),
+          'Map.Title': t('experience.map.mapTitle'),
+          'Marker.Title': t('experience.map.marker'),
+          'NavigationControl.ZoomIn': t('experience.map.zoomIn'),
+          'NavigationControl.ZoomOut': t('experience.map.zoomOut'),
+          'CooperativeGesturesHandler.WindowsHelpText': t('experience.map.windowsHelp'),
+          'CooperativeGesturesHandler.MacHelpText': t('experience.map.macHelp'),
+          'CooperativeGesturesHandler.MobileHelpText': t('experience.map.mobileHelp'),
+        },
       });
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
       map.on('load', () => setReady(true));
@@ -62,7 +74,7 @@ export default function DynamicMap({
     } catch {
       setFailed(true);
     }
-  }, [mode]);
+  }, [i18n.language, mode, t]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -100,7 +112,7 @@ export default function DynamicMap({
       });
       if (marker.variant !== 'origin') {
         const label = document.createElement('span');
-        label.textContent = marker.label || 'Task';
+        label.textContent = marker.label || t('experience.map.marker');
         label.style.display = 'block';
         element.textContent = '';
         element.appendChild(label);
@@ -113,13 +125,13 @@ export default function DynamicMap({
         .setLngLat([marker.longitude, marker.latitude])
         .addTo(map);
     });
-  }, [markers, mode, onMarkerPress, ready, selectedMarkerId]);
+  }, [markers, mode, onMarkerPress, ready, selectedMarkerId, t]);
 
   return (
     <View style={[styles.frame, { height }]}>
-      <div ref={containerRef} style={{ height: '100%', width: '100%' }} aria-label="Interactive task map" />
-      {!ready && !failed && <View pointerEvents="none" style={styles.state}><ActivityIndicator color={Theme.colors.primary} /><Text style={styles.stateText}>Loading live map…</Text></View>}
-      {failed && <View style={styles.state}><Text style={styles.errorTitle}>Map unavailable</Text><Text style={styles.stateText}>Address search still works. Check the configured map style.</Text></View>}
+      <div ref={containerRef} style={{ height: '100%', width: '100%' }} aria-label={t('experience.map.aria')} />
+      {!ready && !failed && <View pointerEvents="none" style={styles.state}><ActivityIndicator color={Theme.colors.primary} /><Text style={styles.stateText}>{t('experience.map.loading')}</Text></View>}
+      {failed && <View style={styles.state}><Text style={styles.errorTitle}>{t('experience.map.unavailable')}</Text><Text style={styles.stateText}>{t('experience.map.searchWorks')}</Text></View>}
       {mode === 'picker' && <View pointerEvents="none" style={styles.pin}><MapPin size={42} color={Theme.colors.primary} fill="#FFFFFF" /></View>}
     </View>
   );

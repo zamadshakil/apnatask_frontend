@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">ApnaTask</title>
+  <desc id="desc">White ApnaTask mark with two people forming a protective letter A around a doorway.</desc>
+  <g fill="none" stroke="#FFFFFF" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M64 209C69 177 78 127 95 98C102 87 114 83 125 88C133 91 140 92 147 91" stroke-width="36"/>
+    <path d="M48 207C62 176 82 140 104 117L127 96C134 88 145 86 153 93C158 97 162 104 166 110C180 136 188 171 188 207" stroke-width="40"/>
+    <path d="M150 114C163 125 183 148 205 176C215 189 217 200 209 209" stroke-width="36"/>
+  </g>
+  <g fill="#FFFFFF">
+    <circle cx="86" cy="44" r="21"/>
+    <circle cx="171" cy="44" r="21"/>
+    <path d="M103 222V168C103 161 106 156 111 152L123 144C126 141 130 141 133 144L145 152C150 156 153 161 153 168V222Z"/>
+  </g>
+</svg>

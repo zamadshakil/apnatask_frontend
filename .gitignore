@@ -13,6 +13,8 @@ dist-web-validation/
 dist-local/
 dist-spa/
 dist-map-*/
+dist-plan-provider/
+dist-ux-preview/
 web-build/
 .playwright-cli/
 

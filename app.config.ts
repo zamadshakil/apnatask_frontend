@@ -16,6 +16,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   const isProduction = variant === 'production';
   const suffix = isProduction ? '' : `.${variant}`;
   const appDomain = process.env.APP_DOMAIN ?? 'apnatask.pk';
+  const appLinkDomain = process.env.APP_LINK_DOMAIN ?? `app.${appDomain}`;
+  const linkDomains = [...new Set([appDomain, appLinkDomain])];
   const projectId = process.env.EAS_PROJECT_ID;
   const webOutput = process.env.EXPO_WEB_OUTPUT === 'static' ? 'static' : 'single';
 
@@ -44,7 +46,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ios: {
       supportsTablet: true,
       bundleIdentifier: `pk.com.apnatask.app${suffix}`,
-      associatedDomains: [`applinks:${appDomain}`],
+      icon: {
+        light: './assets/ios-icon-light.png',
+        dark: './assets/ios-icon-dark.png',
+        tinted: './assets/ios-icon-tinted.png',
+      },
+      associatedDomains: linkDomains.map((domain) => `applinks:${domain}`),
       config: { usesNonExemptEncryption: false },
       infoPlist: {
         UIBackgroundModes: ['remote-notification'],
@@ -54,9 +61,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     android: {
       package: `pk.com.apnatask.app${suffix}`,
       adaptiveIcon: {
-        backgroundColor: '#ECFDF5',
+        backgroundColor: '#082F2C',
         foregroundImage: './assets/android-icon-foreground.png',
-        backgroundImage: './assets/android-icon-background.png',
         monochromeImage: './assets/android-icon-monochrome.png',
       },
       predictiveBackGestureEnabled: true,
@@ -70,7 +76,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         {
           action: 'VIEW',
           autoVerify: true,
-          data: [{ scheme: 'https', host: appDomain, pathPrefix: '/' }],
+          data: linkDomains.map((host) => ({ scheme: 'https', host, pathPrefix: '/' })),
           category: ['BROWSABLE', 'DEFAULT'],
         },
       ],
@@ -91,10 +97,13 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         'expo-splash-screen',
         {
           image: './assets/splash-icon.png',
-          imageWidth: 180,
+          imageWidth: 200,
           resizeMode: 'contain',
-          backgroundColor: '#FFFFFF',
-          dark: { backgroundColor: '#07120E' },
+          backgroundColor: '#F7F4EC',
+          dark: {
+            image: './assets/splash-icon-dark.png',
+            backgroundColor: '#082F2C',
+          },
         },
       ],
       [
@@ -115,7 +124,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       ],
       [
         'expo-notifications',
-        { icon: './assets/android-icon-monochrome.png', color: '#059669' },
+        { icon: './assets/notification-icon.png', color: '#075B55' },
       ],
       '@sentry/react-native',
     ],

@@ -313,6 +313,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/threads/{thread_id}/receipts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Update Message Receipts */
+        post: operations["update_message_receipts_api_v2_threads__thread_id__receipts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/threads/{thread_id}/realtime-ticket": {
         parameters: {
             query?: never;
@@ -324,6 +341,43 @@ export interface paths {
         put?: never;
         /** Create Realtime Ticket */
         post: operations["create_realtime_ticket_api_v2_threads__thread_id__realtime_ticket_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/supply/clusters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Supply Clusters
+         * @description Return k-anonymous supply cells, never provider records or raw coordinates.
+         */
+        get: operations["supply_clusters_api_v2_supply_clusters_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/analytics/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ingest Analytics */
+        post: operations["ingest_analytics_api_v2_analytics_events_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -578,6 +632,26 @@ export interface paths {
         };
         /** Dashboard */
         get: operations["dashboard_api_v2_admin_dashboard_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/admin/marketplace-health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Marketplace Health
+         * @description Privacy-safe marketplace, moderation, supply, and opportunity diagnostics.
+         */
+        get: operations["marketplace_health_api_v2_admin_marketplace_health_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -849,12 +923,35 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** AnalyticsBatchRequest */
+        AnalyticsBatchRequest: {
+            /** Events */
+            events: components["schemas"]["AnalyticsEventInput"][];
+        };
+        /** AnalyticsEventInput */
+        AnalyticsEventInput: {
+            /** Client Event Id */
+            client_event_id: string;
+            /** Name */
+            name: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Properties */
+            properties?: {
+                [key: string]: string | number | boolean | null;
+            };
+        };
         /** BidRequest */
         BidRequest: {
             /** Amount Paisa */
             amount_paisa: number;
             /** Note */
             note?: string | null;
+            /** Arrival Minutes */
+            arrival_minutes?: number | null;
         };
         /** BidResponse */
         BidResponse: {
@@ -876,6 +973,8 @@ export interface components {
             amount_paisa: number;
             /** Note */
             note: string | null;
+            /** Arrival Minutes */
+            arrival_minutes: number | null;
             /** Status */
             status: string;
             /** Thread Id */
@@ -916,6 +1015,12 @@ export interface components {
              * @default true
              */
             publish: boolean;
+            /**
+             * Arrival Preference
+             * @default flexible
+             * @enum {string}
+             */
+            arrival_preference: "asap" | "today" | "scheduled" | "flexible";
         };
         /** BookingResponse */
         BookingResponse: {
@@ -946,6 +1051,17 @@ export interface components {
             verification_status: string;
             /** Verification Score */
             verification_score: number;
+            /** Verification Reasons */
+            verification_reasons?: string[];
+            /**
+             * Arrival Preference
+             * @default flexible
+             */
+            arrival_preference: string;
+            /** Timeline */
+            timeline?: {
+                [key: string]: string | boolean | null;
+            }[];
             exact_address?: components["schemas"]["AddressInput"] | null;
             /** Customer Phone */
             customer_phone?: string | null;
@@ -1132,6 +1248,18 @@ export interface components {
             body: string;
             /** Attachment Key */
             attachment_key?: string | null;
+            /** Reply To Message Id */
+            reply_to_message_id?: string | null;
+        };
+        /** MessageReceiptRequest */
+        MessageReceiptRequest: {
+            /** Message Ids */
+            message_ids: string[];
+            /**
+             * Receipt
+             * @enum {string}
+             */
+            receipt: "delivered" | "read";
         };
         /** MessageResponse */
         MessageResponse: {
@@ -1147,6 +1275,12 @@ export interface components {
             body: string;
             /** Attachment Key */
             attachment_key: string | null;
+            /** Reply To Message Id */
+            reply_to_message_id: string | null;
+            /** Delivered At */
+            delivered_at: string | null;
+            /** Read At */
+            read_at: string | null;
             /**
              * Created At
              * Format: date-time
@@ -1161,6 +1295,12 @@ export interface components {
             longitude: number;
             /** Is Available */
             is_available: boolean;
+            /** Service Radius Km */
+            service_radius_km?: number | null;
+            /** Accuracy M */
+            accuracy_m?: number | null;
+            /** Captured At */
+            captured_at?: string | null;
         };
         /** ProviderModeRequest */
         ProviderModeRequest: {
@@ -1182,6 +1322,12 @@ export interface components {
             reviewer_id: string;
             /** Rating */
             rating: number;
+            /** Punctuality Rating */
+            punctuality_rating?: number | null;
+            /** Communication Rating */
+            communication_rating?: number | null;
+            /** Workmanship Rating */
+            workmanship_rating?: number | null;
             /** Comment */
             comment?: string | null;
             /**
@@ -1198,6 +1344,10 @@ export interface components {
             rating_average: number;
             /** Rating Count */
             rating_count: number;
+            /** Rating Histogram */
+            rating_histogram?: {
+                [key: string]: number;
+            };
             /** Reviews */
             reviews?: components["schemas"]["ProviderReviewItem"][];
         };
@@ -1230,6 +1380,12 @@ export interface components {
             rating: number;
             /** Comment */
             comment?: string | null;
+            /** Punctuality Rating */
+            punctuality_rating?: number | null;
+            /** Communication Rating */
+            communication_rating?: number | null;
+            /** Workmanship Rating */
+            workmanship_rating?: number | null;
         };
         /** ServiceAreaRequest */
         ServiceAreaRequest: {
@@ -1311,7 +1467,7 @@ export interface components {
              * @default en
              * @enum {string}
              */
-            locale: "en" | "ur" | "ur-Latn";
+            locale: "en" | "ur-Latn";
             /**
              * Is Adult
              * @constant
@@ -2028,6 +2184,43 @@ export interface operations {
             };
         };
     };
+    update_message_receipts_api_v2_threads__thread_id__receipts_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
+            path: {
+                thread_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MessageReceiptRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_realtime_ticket_api_v2_threads__thread_id__realtime_ticket_post: {
         parameters: {
             query?: never;
@@ -2046,6 +2239,77 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RealtimeTicketResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    supply_clusters_api_v2_supply_clusters_get: {
+        parameters: {
+            query?: {
+                zoom?: number;
+                category_id?: string | null;
+                south?: number;
+                west?: number;
+                north?: number;
+                east?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ingest_analytics_api_v2_analytics_events_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnalyticsBatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -2318,7 +2582,9 @@ export interface operations {
     create_report_api_v2_reports_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -2528,6 +2794,26 @@ export interface operations {
         };
     };
     dashboard_api_v2_admin_dashboard_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    marketplace_health_api_v2_admin_marketplace_health_get: {
         parameters: {
             query?: never;
             header?: never;
