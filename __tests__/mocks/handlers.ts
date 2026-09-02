@@ -86,10 +86,33 @@ export const handlers = [
     return HttpResponse.json(matched);
   }),
 
+  // GET /api/v1/bookings
+  http.get('*/api/v1/bookings', () => {
+    return HttpResponse.json(mockBookings);
+  }),
+
+  // GET /api/v1/jobs
+  http.get('*/api/v1/jobs', ({ request }) => {
+    const url = new URL(request.url);
+    const category = url.searchParams.get('category');
+    const jobs = mockBookings
+      .filter((booking) => ['pending', 'bidding'].includes(booking.status))
+      .filter((booking) => !category || booking.category === category)
+      .map((booking) => ({
+        id: booking.id,
+        customer_id: booking.customer_id,
+        category: booking.category || 'other',
+        description: booking.description || 'Service request',
+        budget: booking.amount,
+        status: booking.status,
+      }));
+    return HttpResponse.json(jobs);
+  }),
+
   // POST /api/v1/bookings
   http.post('*/api/v1/bookings', async ({ request }) => {
     const body = (await request.json()) as any;
-    const { customer_id, amount, customer_phone } = body;
+    const { customer_id, amount, category, description, customer_phone } = body;
     if (customer_id === undefined || amount === undefined) {
       return new HttpResponse(JSON.stringify({ detail: 'Validation Error' }), { status: 422 });
     }
@@ -98,6 +121,8 @@ export const handlers = [
       id: newId,
       customer_id: Number(customer_id),
       amount: Number(amount),
+      category: category || 'other',
+      description: description || 'Service request',
       status: 'pending',
       customer_phone: customer_phone || '+923001234567',
       provider_id: null

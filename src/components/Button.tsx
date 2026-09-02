@@ -1,115 +1,64 @@
-// src/components/Button.tsx — Premium branded button
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, ViewStyle, TextStyle, ActivityIndicator } from 'react-native';
+import React, { useRef } from 'react';
+import { ActivityIndicator, Animated, Platform, StyleProp, StyleSheet, Text, TextStyle, TouchableOpacity, ViewStyle } from 'react-native';
 import { Theme } from '../styles/theme';
 
 interface ButtonProps {
   title: string;
   onPress: () => void;
-  type?: 'primary' | 'secondary' | 'outline' | 'accent' | 'danger';
+  type?: 'primary' | 'secondary' | 'outline' | 'accent' | 'danger' | 'glass';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
   disabled?: boolean;
   icon?: React.ReactNode;
-  style?: ViewStyle;
-  textStyle?: TextStyle;
+  style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
   testID?: string;
 }
 
-export default function Button({
-  title,
-  onPress,
-  type = 'primary',
-  size = 'md',
-  loading = false,
-  disabled = false,
-  icon,
-  style,
-  textStyle,
-  testID,
-}: ButtonProps) {
-  const buttonStyles = [
-    styles.button,
-    sizeStyles[size],
-    typeStyles[type],
-    disabled && styles.disabled,
-    style,
-  ];
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
-  const textStyles = [
-    styles.text,
-    sizeTextStyles[size],
-    typeTextStyles[type],
-    disabled && styles.disabledText,
-    textStyle,
-  ];
+export default function Button({ title, onPress, type = 'primary', size = 'md', loading = false, disabled = false, icon, style, textStyle, testID }: ButtonProps) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const animate = (toValue: number) => Animated.spring(scale, { toValue, damping: 18, stiffness: 240, mass: 0.72, useNativeDriver: Platform.OS !== 'web' }).start();
+  const foreground = type === 'outline' || type === 'glass' ? Theme.colors.primary : Theme.colors.white;
 
   return (
-    <TouchableOpacity
+    <AnimatedTouchable
       testID={testID}
-      style={buttonStyles}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: disabled || loading, busy: loading }}
+      accessibilityLabel={title}
+      style={[styles.button, sizeStyles[size], typeStyles[type], type === 'primary' && styles.primaryDepth, disabled && styles.disabled, { transform: [{ scale }] }, style]}
       onPress={onPress}
+      onPressIn={() => animate(0.975)}
+      onPressOut={() => animate(1)}
       disabled={disabled || loading}
-      activeOpacity={0.7}
+      activeOpacity={0.94}
     >
-      {loading ? (
-        <ActivityIndicator
-          size="small"
-          color={type === 'outline' ? Theme.colors.primary : Theme.colors.white}
-        />
-      ) : (
-        <>
-          {icon}
-          <Text style={textStyles}>{title}</Text>
-        </>
-      )}
-    </TouchableOpacity>
+      {loading ? <ActivityIndicator size="small" color={foreground} /> : <>{icon}<Text style={[styles.text, sizeTextStyles[size], { color: foreground }, disabled && styles.disabledText, textStyle]}>{title}</Text></>}
+    </AnimatedTouchable>
   );
 }
 
 const sizeStyles: Record<string, ViewStyle> = {
-  sm: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: Theme.radius.sm },
-  md: { paddingVertical: 14, paddingHorizontal: 24, borderRadius: Theme.radius.md },
-  lg: { paddingVertical: 18, paddingHorizontal: 32, borderRadius: Theme.radius.lg },
+  sm: { minHeight: 42, paddingVertical: 10, paddingHorizontal: 17, borderRadius: Theme.radius.sm },
+  md: { minHeight: 52, paddingVertical: 14, paddingHorizontal: 22, borderRadius: Theme.radius.md },
+  lg: { minHeight: 58, paddingVertical: 17, paddingHorizontal: 28, borderRadius: Theme.radius.lg },
 };
-
-const sizeTextStyles: Record<string, TextStyle> = {
-  sm: { fontSize: 13 },
-  md: { fontSize: 16 },
-  lg: { fontSize: 18 },
-};
-
+const sizeTextStyles: Record<string, TextStyle> = { sm: { fontSize: 13 }, md: { fontSize: 16 }, lg: { fontSize: 17 } };
 const typeStyles: Record<string, ViewStyle> = {
-  primary: { backgroundColor: Theme.colors.primary },
+  primary: { backgroundColor: Theme.colors.primary, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' },
   secondary: { backgroundColor: Theme.colors.primaryLight },
-  outline: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: Theme.colors.primary },
+  outline: { backgroundColor: Theme.colors.surfaceGlassStrong, borderWidth: 1, borderColor: 'rgba(7,94,84,0.22)' },
   accent: { backgroundColor: Theme.colors.accent },
   danger: { backgroundColor: Theme.colors.error },
-};
-
-const typeTextStyles: Record<string, TextStyle> = {
-  primary: { color: Theme.colors.white },
-  secondary: { color: Theme.colors.white },
-  outline: { color: Theme.colors.primary },
-  accent: { color: Theme.colors.white },
-  danger: { color: Theme.colors.white },
+  glass: { backgroundColor: 'rgba(255,255,255,0.72)', borderWidth: 1, borderColor: Theme.colors.glassBorder },
 };
 
 const styles = StyleSheet.create({
-  button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  text: {
-    fontWeight: '600',
-    letterSpacing: 0.3,
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-  disabledText: {
-    opacity: 0.7,
-  },
+  button: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
+  primaryDepth: Platform.OS === 'web' ? ({ boxShadow: Theme.webShadows.md } as ViewStyle) : Theme.shadows.md,
+  text: { ...Theme.typography.button },
+  disabled: { opacity: 0.45 },
+  disabledText: { opacity: 0.8 },
 });

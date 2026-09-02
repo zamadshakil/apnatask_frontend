@@ -1,51 +1,27 @@
-// src/components/Card.tsx — Premium card with shadow variants
 import React, { ReactNode } from 'react';
-import { StyleSheet, View, ViewStyle, TouchableOpacity } from 'react-native';
+import { Platform, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { Theme } from '../styles/theme';
+import TactilePressable from './TactilePressable';
 
 interface CardProps {
   children: ReactNode;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   elevation?: 'sm' | 'md' | 'lg';
+  variant?: 'surface' | 'glass' | 'tinted';
   onPress?: () => void;
   testID?: string;
 }
 
-export default function Card({
-  children,
-  style,
-  elevation = 'md',
-  onPress,
-  testID,
-}: CardProps) {
-  const shadowStyle = Theme.shadows[elevation];
-  const cardStyle = [styles.card, shadowStyle, style];
-
-  if (onPress) {
-    return (
-      <TouchableOpacity
-        testID={testID}
-        style={cardStyle}
-        onPress={onPress}
-        activeOpacity={0.85}
-      >
-        {children}
-      </TouchableOpacity>
-    );
-  }
-
-  return (
-    <View testID={testID} style={cardStyle}>
-      {children}
-    </View>
-  );
+export default function Card({ children, style, elevation = 'sm', variant = 'surface', onPress, testID }: CardProps) {
+  const depth = Platform.OS === 'web' ? ({ boxShadow: Theme.webShadows[elevation] } as ViewStyle) : Theme.shadows[elevation];
+  const cardStyle = [styles.card, styles[variant], depth, style];
+  if (onPress) return <TactilePressable testID={testID} accessibilityRole="button" style={cardStyle} onPress={onPress}>{children}</TactilePressable>;
+  return <View testID={testID} style={cardStyle}>{children}</View>;
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: Theme.colors.surface,
-    borderRadius: Theme.radius.md,
-    padding: Theme.spacing.lg,
-    marginVertical: Theme.spacing.sm,
-  },
+  card: { borderRadius: Theme.radius.lg, padding: Theme.spacing.xl, marginVertical: Theme.spacing.sm, borderWidth: 1 },
+  surface: { backgroundColor: Theme.colors.surface, borderColor: Theme.colors.borderLight },
+  glass: { backgroundColor: Theme.colors.surfaceGlass, borderColor: Theme.colors.glassBorder },
+  tinted: { backgroundColor: Theme.colors.primaryMist, borderColor: 'rgba(7,94,84,0.08)' },
 });

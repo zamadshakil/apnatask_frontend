@@ -1,0 +1,24 @@
+name: Client CI
+on:
+  pull_request:
+  push:
+    branches: [main, codex/production-ready]
+permissions: { contents: read }
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with: { node-version: 24, cache: npm }
+      - run: npm ci --legacy-peer-deps
+      - run: npm run typecheck
+      - run: npm test -- --runInBand
+      - run: npx expo-doctor
+      - run: npx expo export --platform web --output-dir dist-web
+        env:
+          EXPO_PUBLIC_API_BASE_URL: https://api.example.invalid/api/v2
+          EXPO_PUBLIC_WS_BASE_URL: wss://api.example.invalid
+          EXPO_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: build-validation-key
+      - run: npm audit --omit=dev --audit-level=critical

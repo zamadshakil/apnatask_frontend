@@ -44,12 +44,12 @@ ApnaTask is a hyperlocal services marketplace mobile application frontend built 
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
-| M1 | Scaffold & Navigation Setup | Set up React Native / Expo environment, install dependencies, establish customer/provider tab navigation screens skeleton. | None | BLOCKED: RESOURCE_EXHAUSTED (quota reached) |
-| M2 | Brand Identity & Styling | Implement design system (WhatsApp colors, typography, buttons, inputs, chat bubbles). | M1 | PLANNED |
-| M3 | Customer Workspace Screens | Create Task, Active Bookings, and Customer Bidding Screen UI (mock data). | M2 | PLANNED |
-| M4 | Provider Workspace & Wallet | Wallet Screen (simulate top-up), Discover Nearby Jobs screen, Provider Bidding Screen UI (mock data), wallet guardrails. | M2 | PLANNED |
-| M5 | Backend REST & WS Integration | Connect matching API, provider location tracking API, and WebSockets (real-time chat + bidding engine with query parameters: `token` and `booking_id`). | M3, M4 | PLANNED |
-| M6 | Final E2E Pass & Hardening | Integrate with E2E Testing Track test runner, run Challenger tests, run Forensic Auditor, fix all bugs. | M5 | PLANNED |
+| M1 | Scaffold & Navigation Setup | Set up React Native / Expo environment, install dependencies, establish customer/provider tab navigation screens skeleton. | None | DONE |
+| M2 | Brand Identity & Styling | Implement design system (WhatsApp colors, typography, buttons, inputs, chat bubbles). | M1 | DONE |
+| M3 | Customer Workspace Screens | Create Task, Active Bookings, and Customer Bidding screens. | M2 | DONE |
+| M4 | Provider Workspace & Wallet | Wallet, nearby jobs, provider bidding, and wallet guardrails. | M2 | DONE |
+| M5 | Backend REST & WS Integration | Supabase auth, booking/job/wallet REST APIs, and real-time negotiation WebSockets. | M3, M4 | IN PROGRESS — live provider GPS updates remain |
+| M6 | Final E2E Pass & Hardening | Automated integration/E2E tests, type checking, device and live-backend validation. | M5 | IN PROGRESS — 44 tests and TypeScript pass; device validation remains |
 
 ## Interface Contracts
 - **Visual Colors**:
@@ -60,8 +60,8 @@ ApnaTask is a hyperlocal services marketplace mobile application frontend built 
   - Chat Bubble Sent: `#DCF8C6`
   - Chat Bubble Received: `#FFFFFF`
 - **Geospatial Location REST API integration**:
-  - `POST /api/v1/provider/location`: Provider sends current coords.
-  - `GET /api/v1/matching`: Fetch nearby providers / active jobs.
+  - `POST /api/v1/provider/location`: Provider sends current coordinates (pending mobile wiring).
+  - `GET /api/v1/jobs?category=<category>`: Fetch open jobs for a provider.
 - **WebSocket Bidding Room integration**:
   - `WS /api/v1/ws/negotiation?token=<JWT>&booking_id=<booking_id>`
   - Frame Format: `{ "type": "bid" | "chat" | "accept", "booking_id": int, "sender_id": int, "role": "customer" | "provider", "amount": float, "message": str }`

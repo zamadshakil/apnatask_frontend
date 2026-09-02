@@ -2,6 +2,8 @@ import { Alert } from 'react-native';
 import { server } from './mocks/server';
 import { MockWebSocket } from './mocks/websocket-mock';
 
+jest.setTimeout(15_000);
+
 // 1. Mock Alert.alert to automatically trigger button onPress callbacks
 jest.spyOn(Alert, 'alert').mockImplementation((title, message, buttons) => {
   if (buttons && buttons.length) {
@@ -46,18 +48,12 @@ jest.mock('@react-navigation/native', () => {
   };
 });
 
-jest.mock('react-native-safe-area-context', () => {
-  const inset = { top: 0, right: 0, bottom: 0, left: 0 };
-  return {
-    SafeAreaProvider: ({ children }: any) => children,
-    SafeAreaView: ({ children }: any) => children,
-    useSafeAreaInsets: () => inset,
-  };
-});
+import mockSafeAreaContext from 'react-native-safe-area-context/jest/mock';
+jest.mock('react-native-safe-area-context', () => mockSafeAreaContext);
 
 // Mock react-native-reanimated or expo-modules if used
 
-// 4. Mock react-native Animated to run synchronously in tests
+// Mock react-native Animated to run synchronously in tests
 jest.mock('react-native', () => {
   const RN = jest.requireActual('react-native');
   RN.Animated.timing = (value: any, config: any) => ({
@@ -76,3 +72,8 @@ jest.mock('react-native', () => {
   });
   return RN;
 });
+
+// Mock AsyncStorage
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock')
+);

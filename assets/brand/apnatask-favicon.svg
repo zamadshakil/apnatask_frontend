@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">ApnaTask</title>
+  <desc id="desc">Simplified ApnaTask doorway mark for very small displays.</desc>
+  <rect width="64" height="64" rx="14" fill="#082F2C"/>
+  <circle cx="22" cy="13" r="4.5" fill="#F7F4EC"/>
+  <circle cx="43" cy="13" r="4.5" fill="#F7F4EC"/>
+  <path d="M13 49C18 38 24 28 31 21C33 19 36 20 38 22C44 29 49 39 51 49" fill="none" stroke="#F7F4EC" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M27 50V40C27 37 28 35 30 33L32 31C33 30 35 30 36 31L39 34C41 36 41 38 41 41V50Z" fill="#F7F4EC"/>
+</svg>

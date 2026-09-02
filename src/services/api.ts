@@ -1,21 +1,25 @@
-// src/services/api.ts
-import axios from 'axios';
-import { Platform } from 'react-native';
+import * as Crypto from 'expo-crypto';
+import createClient from 'openapi-fetch';
+import type { paths } from '../api/schema';
+import { runtime } from '../config/runtime';
+import { supabase } from './supabaseClient';
 
-// In local development, Android emulator connects to host machine via 10.0.2.2, iOS uses localhost
-const getBaseUrl = () => {
-  if (Platform.OS === 'android') {
-    return 'http://10.0.2.2:8000/api/v1';
-  }
-  return 'http://localhost:8000/api/v1';
-};
+export const createIdempotencyKey = () => Crypto.randomUUID();
 
-const api = axios.create({
-  baseURL: getBaseUrl(),
-  timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
+async function accessToken(): Promise<string | undefined> {
+  if (runtime.localAuthToken) return runtime.localAuthToken;
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+  return data.session?.access_token;
+}
+
+export const typedApi = createClient<paths>({ baseUrl: runtime.apiBaseUrl });
+
+typedApi.use({
+  async onRequest({ request }) {
+    const token = await accessToken();
+    if (token) request.headers.set('Authorization', `Bearer ${token}`);
+    request.headers.set('X-Request-ID', Crypto.randomUUID());
+    return request;
   },
 });
-
-export default api;

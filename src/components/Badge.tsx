@@ -10,13 +10,13 @@ interface BadgeProps {
   style?: ViewStyle;
 }
 
-const variantColors: Record<string, { bg: string; text: string }> = {
-  success: { bg: '#E8F5E9', text: '#2E7D32' },
-  warning: { bg: '#FFF8E1', text: '#F57F17' },
-  error: { bg: '#FFEBEE', text: '#C62828' },
-  info: { bg: '#E3F2FD', text: '#1565C0' },
-  neutral: { bg: '#F0F2F5', text: '#667781' },
-  verified: { bg: '#E3F2FD', text: '#039BE5' },
+const variantColors: Record<string, { bg: string; text: string; border: string }> = {
+  success: { bg: 'rgba(37,211,102,0.11)', text: '#147B43', border: 'rgba(37,211,102,0.18)' },
+  warning: { bg: 'rgba(233,175,40,0.12)', text: '#98690A', border: 'rgba(233,175,40,0.2)' },
+  error: { bg: 'rgba(217,45,79,0.09)', text: '#B72043', border: 'rgba(217,45,79,0.16)' },
+  info: { bg: 'rgba(33,136,217,0.09)', text: '#176CA9', border: 'rgba(33,136,217,0.16)' },
+  neutral: { bg: 'rgba(95,113,108,0.08)', text: '#5F716C', border: 'rgba(95,113,108,0.12)' },
+  verified: { bg: 'rgba(33,136,217,0.09)', text: '#176CA9', border: 'rgba(33,136,217,0.16)' },
 };
 
 export default function Badge({ label, variant = 'neutral', size = 'sm', style }: BadgeProps) {
@@ -26,7 +26,7 @@ export default function Badge({ label, variant = 'neutral', size = 'sm', style }
     <View style={[
       styles.badge,
       size === 'md' && styles.badgeMd,
-      { backgroundColor: colors.bg },
+      { backgroundColor: colors.bg, borderColor: colors.border },
       style,
     ]}>
       {variant === 'verified' && <Text style={styles.icon}>✓</Text>}
@@ -48,6 +48,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: Theme.radius.full,
+    borderWidth: 1,
     gap: 3,
   },
   badgeMd: {
@@ -60,8 +61,8 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.3,
+    fontWeight: '700',
+    letterSpacing: 0.15,
   },
   textMd: {
     fontSize: 13,

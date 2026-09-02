@@ -1,13 +1,13 @@
 module.exports = {
   preset: './node_modules/jest-expo/jest-preset.js',
-  setupFilesAfterEnv: ['./__tests__/setup.ts'],
-  testMatch: [
-    '**/__tests__/**/*.test.[jt]s?(x)'
-  ],
+  setupFilesAfterEnv: ['./__tests__/production/setup.ts'],
+  testMatch: ['**/__tests__/production/**/*.test.[jt]s?(x)'],
+  modulePathIgnorePatterns: ['<rootDir>/node_modules\\..*/'],
   moduleNameMapper: {
     '^msw/node$': '<rootDir>/node_modules/msw/lib/node/index.js',
     '^msw/native$': '<rootDir>/node_modules/msw/lib/native/index.js',
     '^msw$': '<rootDir>/node_modules/msw/lib/core/index.js',
+    '^lucide-react-native$': '<rootDir>/__tests__/mocks/lucide-react-native-mock.js',
   },
   transform: {
     '\\.[jt]sx?$': [
