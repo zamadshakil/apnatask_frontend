@@ -26,9 +26,9 @@ if (isProduction && authMode !== 'phone') {
   throw new Error('Production must use phone authentication');
 }
 
-function requiredPublicValue(name: string, fallback: string): string {
-  const value = process.env[name]?.trim();
-  if (value) return value;
+function requiredPublicValue(name: string, value: string | undefined, fallback: string): string {
+  const normalizedValue = value?.trim();
+  if (normalizedValue) return normalizedValue;
   if (isHosted) throw new Error(`${name} is required in hosted builds`);
   return fallback;
 }
@@ -39,13 +39,21 @@ function androidEmulatorHost(url: string): string {
 }
 
 const configuredApiBaseUrl = androidEmulatorHost(
-  requiredPublicValue('EXPO_PUBLIC_API_BASE_URL', 'http://localhost:8000/api/v2'),
+  requiredPublicValue(
+    'EXPO_PUBLIC_API_BASE_URL',
+    process.env.EXPO_PUBLIC_API_BASE_URL,
+    'http://localhost:8000/api/v2',
+  ),
 ).replace(/\/$/, '');
 // Generated OpenAPI operations already contain the `/api/v2` prefix. Accept
 // older environment files that included it without producing a doubled path.
 const apiBaseUrl = configuredApiBaseUrl.replace(/\/api\/v2$/, '');
 const websocketBaseUrl = androidEmulatorHost(
-  requiredPublicValue('EXPO_PUBLIC_WS_BASE_URL', 'ws://localhost:8000'),
+  requiredPublicValue(
+    'EXPO_PUBLIC_WS_BASE_URL',
+    process.env.EXPO_PUBLIC_WS_BASE_URL,
+    'ws://localhost:8000',
+  ),
 ).replace(/\/$/, '');
 const configuredMapStyleUrl = process.env.EXPO_PUBLIC_MAP_STYLE_URL?.trim();
 const mapboxAccessToken = (
@@ -71,8 +79,16 @@ export const runtime = Object.freeze({
   authMode,
   apiBaseUrl,
   websocketBaseUrl,
-  supabaseUrl: requiredPublicValue('EXPO_PUBLIC_SUPABASE_URL', 'http://localhost:54321'),
-  supabaseAnonKey: requiredPublicValue('EXPO_PUBLIC_SUPABASE_ANON_KEY', 'development-anon-key'),
+  supabaseUrl: requiredPublicValue(
+    'EXPO_PUBLIC_SUPABASE_URL',
+    process.env.EXPO_PUBLIC_SUPABASE_URL,
+    'http://localhost:54321',
+  ),
+  supabaseAnonKey: requiredPublicValue(
+    'EXPO_PUBLIC_SUPABASE_ANON_KEY',
+    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+    'development-anon-key',
+  ),
   sentryDsn: process.env.EXPO_PUBLIC_SENTRY_DSN?.trim() || undefined,
   mapProvider: mapboxAccessToken ? 'mapbox' : 'openfreemap',
   // Mapbox's Static Tiles API is intentionally consumed through the existing
