@@ -1,10 +1,9 @@
 import type { components } from '../../../src/api/schema';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import * as SecureStore from 'expo-secure-store';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Clock3, MapPin, MessageCircleMore, ShieldCheck, Star, WalletCards } from 'lucide-react-native';
-import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import Badge from '../../../src/components/Badge';
 import Button from '../../../src/components/Button';
 import Card from '../../../src/components/Card';
@@ -19,6 +18,10 @@ import { Theme } from '../../../src/styles/theme';
 import { formatPkr } from '../../../src/utils/format';
 import i18n from '../../../src/i18n';
 
+import { useSession } from '../../../src/providers/AuthProvider';
+import TaskPhotos from '../../../src/components/TaskPhotos';
+import { liveQueryOptions, problemDetail } from '../../../src/utils/marketplace';
+
 type Bid = components['schemas']['BidResponse'];
 const statusVariant = (status: string): 'success' | 'warning' | 'info' | 'neutral' => status === 'open' || status === 'completed' ? 'success' : status === 'in_progress' || status === 'en_route' ? 'info' : status === 'completion_requested' ? 'warning' : 'neutral';
 
@@ -29,16 +32,51 @@ function InfoRow({ icon: Icon, label, value, emphasized }: { icon: React.Compone
 export default function TaskDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const cache = useQueryClient();
+  const { user } = useSession();
+  const [completionCode, setCompletionCode] = useState<string>();
+  const [feedback, setFeedback] = useState<string>();
+  const [busy, setBusy] = useState(false);
+  const [reviewed, setReviewed] = useState(false);
+  const actionKeys = useRef<Record<string, string>>({});
+  const keyFor = (action: string) => actionKeys.current[action] ??= createIdempotencyKey();
+  useEffect(() => { setCompletionCode(undefined); setFeedback(undefined); setReviewed(false); actionKeys.current = {}; }, [id, user?.id]);
   const [review, setReview] = useState('');
   const [rating, setRating] = useState(5);
   const [punctuality, setPunctuality] = useState(5);
   const [communication, setCommunication] = useState(5);
   const [workmanship, setWorkmanship] = useState(5);
-  const task = useQuery({ queryKey: ['booking', id], queryFn: async () => { const { data, error } = await typedApi.GET('/api/v2/bookings/{booking_id}', { params: { path: { booking_id: id } } }); if (error || !data) throw error; return data; } });
-  const bids = useQuery({ queryKey: ['booking-bids', id], enabled: task.data?.status === 'open', queryFn: async () => { const { data, error } = await typedApi.GET('/api/v2/bookings/{booking_id}/bids', { params: { path: { booking_id: id } } }); if (error) throw error; return (data ?? []) as Bid[]; } });
-  const accept = async (bid: Bid) => { const { data, error } = await typedApi.POST('/api/v2/bookings/{booking_id}/bids/{bid_id}/accept', { params: { path: { booking_id: id, bid_id: bid.id } }, headers: { 'Idempotency-Key': createIdempotencyKey() } }); if (error || !data) return Alert.alert(i18n.t('experience.task.selectFailed'), i18n.t('experience.task.selectFailedDetail')); const result = data as { completion_code?: string }; if (result.completion_code) { await SecureStore.setItemAsync(`completion.${id}`, result.completion_code); Alert.alert(i18n.t('experience.task.selected'), i18n.t('experience.task.codeMessage', { code: result.completion_code })); } await cache.invalidateQueries({ queryKey: ['booking', id] }); };
-  const confirmCompletion = async () => { const code = await SecureStore.getItemAsync(`completion.${id}`); if (!code) return Alert.alert(i18n.t('experience.task.codeUnavailable'), i18n.t('experience.task.supportOverride')); const { error } = await typedApi.POST('/api/v2/bookings/{booking_id}/transition', { params: { path: { booking_id: id } }, headers: { 'Idempotency-Key': createIdempotencyKey() }, body: { action: 'confirm_completion', completion_code: code } }); if (error) return Alert.alert(i18n.t('experience.task.completionFailed'), i18n.t('experience.task.completionFailedDetail')); await cache.invalidateQueries({ queryKey: ['booking', id] }); };
-  const submitReview = async () => { const { error } = await typedApi.POST('/api/v2/bookings/{booking_id}/reviews', { params: { path: { booking_id: id } }, headers: { 'Idempotency-Key': createIdempotencyKey() }, body: { rating, punctuality_rating: punctuality, communication_rating: communication, workmanship_rating: workmanship, comment: review.trim() || null } }); Alert.alert(error ? i18n.t('experience.task.reviewFailed') : i18n.t('experience.task.thanks'), error ? i18n.t('experience.task.reviewExisting') : i18n.t('experience.task.reviewPublished')); };
+  const task = useQuery({ ...liveQueryOptions, queryKey: ['booking', id], queryFn: async () => { const { data, error } = await typedApi.GET('/api/v2/bookings/{booking_id}', { params: { path: { booking_id: id } } }); if (error || !data) throw error; return data; } });
+  const bids = useQuery({ ...liveQueryOptions, queryKey: ['booking-bids', id], enabled: task.data?.status === 'open', queryFn: async () => { const { data, error } = await typedApi.GET('/api/v2/bookings/{booking_id}/bids', { params: { path: { booking_id: id } } }); if (error) throw error; return (data ?? []) as Bid[]; } });
+  const refresh = () => Promise.all([['booking', id], ['booking-bids', id], ['provider-assigned'], ['bookings'], ['active-tasks']].map((queryKey) => cache.invalidateQueries({ queryKey })));
+  const runAction = async (action: () => Promise<void>) => {
+    if (busy) return;
+    setBusy(true); setFeedback(undefined);
+    try { await action(); } catch (error) { setFeedback(problemDetail(error, i18n.t('flow.retry'))); }
+    finally { setBusy(false); await refresh(); }
+  };
+  const recoverCode = async () => {
+    const { data, error } = await typedApi.POST('/api/v2/bookings/{booking_id}/completion-code', { params: { path: { booking_id: id } }, headers: { 'Idempotency-Key': createIdempotencyKey() } });
+    if (error || !data) throw error;
+    setCompletionCode(data.completion_code); return data.completion_code;
+  };
+  const accept = (bid: Bid) => runAction(async () => {
+    const { data, error } = await typedApi.POST('/api/v2/bookings/{booking_id}/bids/{bid_id}/accept', { params: { path: { booking_id: id, bid_id: bid.id } }, headers: { 'Idempotency-Key': keyFor('accept:' + bid.id) } });
+    if (error || !data) throw error;
+    setCompletionCode((data as { completion_code?: string }).completion_code);
+    setFeedback(i18n.t('experience.task.selected'));
+  });
+  const confirmCompletion = () => runAction(async () => {
+    const code = await recoverCode();
+    const { error } = await typedApi.POST('/api/v2/bookings/{booking_id}/transition', { params: { path: { booking_id: id } }, headers: { 'Idempotency-Key': keyFor('complete:' + code) }, body: { action: 'confirm_completion', completion_code: code } });
+    if (error) throw error;
+    setCompletionCode(undefined);
+  });
+  const submitReview = () => runAction(async () => {
+    const body = { rating, punctuality_rating: punctuality, communication_rating: communication, workmanship_rating: workmanship, comment: review.trim() || null };
+    const { error } = await typedApi.POST('/api/v2/bookings/{booking_id}/reviews', { params: { path: { booking_id: id } }, headers: { 'Idempotency-Key': keyFor('review:' + JSON.stringify(body)) }, body });
+    if (error) throw error;
+    setReviewed(true); setFeedback(i18n.t('flow.reviewThanks'));
+  });
   if (task.isLoading) return <StateView title={i18n.t('experience.task.loading')} loading />;
   if (task.isError || !task.data) return <StateView title={i18n.t('experience.task.unavailable')} onRetry={() => task.refetch()} />;
   const value = task.data;
@@ -46,10 +84,13 @@ export default function TaskDetail() {
   const address = value.exact_address ? `${value.exact_address.address_line}, ${value.exact_address.city}` : i18n.t('experience.task.privateAddress');
 
   return <Screen topInset={false}>
+    {!!feedback && <Text accessibilityRole="alert" style={styles.actionCopy}>{feedback}</Text>}
+    {value.customer_id === user?.id && ['accepted', 'en_route', 'in_progress', 'completion_requested'].includes(value.status) && <Card variant="tinted"><Text style={styles.actionTitle}>{i18n.t('flow.code')}</Text><Text style={styles.actionCopy}>{i18n.t('flow.codeHint')}</Text>{completionCode ? <Text selectable style={styles.bidAmount}>{completionCode}</Text> : <Button title={i18n.t('flow.showCode')} loading={busy} onPress={() => void runAction(async () => { await recoverCode(); })} />}</Card>}
     <FadeIn>
       <View style={styles.titleRow}><Text style={styles.eyebrow}>{i18n.t('experience.task.eyebrow')}</Text><Badge label={i18n.t(`experience.task.status.${value.status}`, { defaultValue: value.status.replaceAll('_', ' ') })} variant={statusVariant(value.status)} size="md" /></View>
       <Text style={styles.title}>{value.title}</Text>
       <Text style={styles.description}>{value.description}</Text>
+      <TaskPhotos images={value.images} />
     </FadeIn>
 
     <FadeIn delay={40}>
@@ -71,11 +112,11 @@ export default function TaskDetail() {
 
     {value.status === 'open' && <FadeIn delay={120}>
       <SectionHeader title={i18n.t('experience.task.offers')} detail={i18n.t('experience.task.offersDetail')} />
-      {bids.isLoading ? <StateView title={i18n.t('experience.task.checkingOffers')} loading /> : bids.data?.length ? bids.data.map((bid) => <Card key={bid.id} elevation="md" style={styles.bidCard}><View style={styles.bidTop}><View><Text style={styles.bidLabel}>{bid.provider_display_name}</Text><Text style={styles.bidAmount}>{formatPkr(bid.amount_paisa)}</Text></View><View style={styles.verified}><ShieldCheck color={Theme.colors.primary} size={18} /><Text style={styles.verifiedText}>{i18n.t('experience.task.kyc')}</Text></View></View><View style={styles.reputation}><Star color={Theme.colors.warning} fill={Theme.colors.warning} size={16} /><Text style={styles.reputationText}>{bid.provider_rating_count ? `${bid.provider_rating_average.toFixed(1)} · ${i18n.t('experience.task.verifiedReviews', { count: bid.provider_rating_count })}` : i18n.t('experience.task.newProvider')} · {i18n.t('experience.task.completedJobs', { count: bid.provider_completed_jobs })}{bid.arrival_minutes ? ` · ${bid.arrival_minutes < 60 ? i18n.t('experience.task.arrivesMinutes', { count: bid.arrival_minutes }) : i18n.t('experience.task.arrivesHours', { count: Math.round(bid.arrival_minutes / 60) })}` : ''}</Text></View>{bid.note && <Text style={styles.bidNote}>{bid.note}</Text>}<View style={styles.bidActions}><Button title={i18n.t('experience.task.message')} type="outline" style={styles.bidAction} onPress={() => router.push({ pathname: '/(customer)/thread/[id]', params: { id: bid.thread_id } })} /><Button title={i18n.t('experience.task.select')} style={styles.bidAction} onPress={() => void accept(bid)} /></View></Card>) : <Card variant="glass" style={styles.emptyCard}><EmptyState icon={MessageCircleMore} title={i18n.t('experience.task.noOffers')} detail={i18n.t('experience.task.noOffersDetail')} /></Card>}
+      {bids.isError ? <StateView title={i18n.t('experience.task.selectFailedDetail')} onRetry={() => void bids.refetch()} /> : bids.isLoading ? <StateView title={i18n.t('experience.task.checkingOffers')} loading /> : bids.data?.length ? bids.data.map((bid) => <Card key={bid.id} elevation="md" style={styles.bidCard}><View style={styles.bidTop}><View><Text style={styles.bidLabel}>{bid.provider_display_name}</Text><Text style={styles.bidAmount}>{formatPkr(bid.amount_paisa)}</Text></View><View style={styles.verified}><ShieldCheck color={Theme.colors.primary} size={18} /><Text style={styles.verifiedText}>{i18n.t('experience.task.kyc')}</Text></View></View><View style={styles.reputation}><Star color={Theme.colors.warning} fill={Theme.colors.warning} size={16} /><Text style={styles.reputationText}>{bid.provider_rating_count ? `${bid.provider_rating_average.toFixed(1)} · ${i18n.t('experience.task.verifiedReviews', { count: bid.provider_rating_count })}` : i18n.t('experience.task.newProvider')} · {i18n.t('experience.task.completedJobs', { count: bid.provider_completed_jobs })}{bid.arrival_minutes ? ` · ${bid.arrival_minutes < 60 ? i18n.t('experience.task.arrivesMinutes', { count: bid.arrival_minutes }) : i18n.t('experience.task.arrivesHours', { count: Math.round(bid.arrival_minutes / 60) })}` : ''}</Text></View>{bid.note && <Text style={styles.bidNote}>{bid.note}</Text>}<View style={styles.bidActions}><Button title={i18n.t('experience.task.message')} type="outline" style={styles.bidAction} onPress={() => router.push({ pathname: '/(customer)/thread/[id]', params: { id: bid.thread_id } })} /><Button disabled={busy} title={i18n.t('experience.task.select')} style={styles.bidAction} onPress={() => void accept(bid)} /></View></Card>) : <Card variant="glass" style={styles.emptyCard}><EmptyState icon={MessageCircleMore} title={i18n.t('experience.task.noOffers')} detail={i18n.t('experience.task.noOffersDetail')} /></Card>}
     </FadeIn>}
 
-    {value.status === 'completion_requested' && <Card variant="tinted" elevation="md"><View style={styles.actionIcon}><Clock3 color={Theme.colors.primary} /></View><Text style={styles.actionTitle}>{i18n.t('experience.task.workFinished')}</Text><Text style={styles.actionCopy}>{i18n.t('experience.task.confirmCopy')}</Text><Button title={i18n.t('experience.task.confirm')} onPress={() => void confirmCompletion()} /></Card>}
-    {value.status === 'completed' && <Card elevation="md"><Text style={styles.actionTitle}>{i18n.t('experience.task.reviewWork')}</Text><Text style={styles.actionCopy}>{i18n.t('experience.task.reviewCopy')}</Text><RatingRow label={i18n.t('experience.task.overall')} value={rating} onChange={setRating} /><RatingRow label={i18n.t('experience.task.punctuality')} value={punctuality} onChange={setPunctuality} /><RatingRow label={i18n.t('experience.task.communication')} value={communication} onChange={setCommunication} /><RatingRow label={i18n.t('experience.task.workmanship')} value={workmanship} onChange={setWorkmanship} /><Input label={i18n.t('experience.task.comment')} value={review} onChangeText={setReview} multiline /><Button title={i18n.t('experience.task.publishReview')} onPress={() => void submitReview()} /></Card>}
+    {value.status === 'completion_requested' && <Card variant="tinted" elevation="md"><View style={styles.actionIcon}><Clock3 color={Theme.colors.primary} /></View><Text style={styles.actionTitle}>{i18n.t('experience.task.workFinished')}</Text><Text style={styles.actionCopy}>{i18n.t('experience.task.confirmCopy')}</Text><Button loading={busy} title={i18n.t('experience.task.confirm')} onPress={() => void confirmCompletion()} /></Card>}
+    {value.status === 'completed' && !reviewed && <Card elevation="md"><Text style={styles.actionTitle}>{i18n.t('experience.task.reviewWork')}</Text><Text style={styles.actionCopy}>{i18n.t('experience.task.reviewCopy')}</Text><RatingRow label={i18n.t('experience.task.overall')} value={rating} onChange={setRating} /><RatingRow label={i18n.t('experience.task.punctuality')} value={punctuality} onChange={setPunctuality} /><RatingRow label={i18n.t('experience.task.communication')} value={communication} onChange={setCommunication} /><RatingRow label={i18n.t('experience.task.workmanship')} value={workmanship} onChange={setWorkmanship} /><Input label={i18n.t('experience.task.comment')} value={review} onChangeText={setReview} multiline /><Button loading={busy} title={i18n.t('experience.task.publishReview')} onPress={() => void submitReview()} /></Card>}
   </Screen>;
 }
 

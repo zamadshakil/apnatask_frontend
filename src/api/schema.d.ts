@@ -89,6 +89,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/provider/presence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Provider Presence */
+        get: operations["get_provider_presence_api_v2_provider_presence_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/provider/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Provider Availability */
+        put: operations["update_provider_availability_api_v2_provider_availability_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/provider/location": {
         parameters: {
             query?: never;
@@ -221,6 +255,23 @@ export interface paths {
         put?: never;
         /** Accept Bid */
         post: operations["accept_bid_api_v2_bookings__booking_id__bids__bid_id__accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/bookings/{booking_id}/completion-code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Recover Customer Completion Code */
+        post: operations["recover_customer_completion_code_api_v2_bookings__booking_id__completion_code_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -446,6 +497,23 @@ export interface paths {
         put?: never;
         /** Upload Intent */
         post: operations["upload_intent_api_v2_uploads_intents_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/uploads/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Complete Upload */
+        post: operations["complete_upload_api_v2_uploads_complete_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1022,6 +1090,15 @@ export interface components {
              */
             arrival_preference: "asap" | "today" | "scheduled" | "flexible";
         };
+        /** BookingImageResponse */
+        BookingImageResponse: {
+            /** Id */
+            id: string;
+            /** Url */
+            url?: string | null;
+            /** Status */
+            status: string;
+        };
         /** BookingResponse */
         BookingResponse: {
             /** Id */
@@ -1075,6 +1152,8 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+            /** Images */
+            images?: components["schemas"]["BookingImageResponse"][];
         };
         /** BookingVerificationDecisionRequest */
         BookingVerificationDecisionRequest: {
@@ -1105,6 +1184,11 @@ export interface components {
             enabled: boolean;
             /** Reason */
             reason: string;
+        };
+        /** CompletionCodeResponse */
+        CompletionCodeResponse: {
+            /** Completion Code */
+            completion_code: string;
         };
         /** ConsentRequest */
         ConsentRequest: {
@@ -1287,6 +1371,13 @@ export interface components {
              */
             created_at: string;
         };
+        /** ProviderAvailabilityRequest */
+        ProviderAvailabilityRequest: {
+            /** Is Available */
+            is_available: boolean;
+            /** Service Radius Km */
+            service_radius_km?: number | null;
+        };
         /** ProviderLocationRequest */
         ProviderLocationRequest: {
             /** Latitude */
@@ -1312,6 +1403,17 @@ export interface components {
              * Service Radius Km
              * @default 15
              */
+            service_radius_km: number;
+        };
+        /** ProviderPresenceResponse */
+        ProviderPresenceResponse: {
+            /** Is Available */
+            is_available: boolean;
+            /** Latitude */
+            latitude: number | null;
+            /** Longitude */
+            longitude: number | null;
+            /** Service Radius Km */
             service_radius_km: number;
         };
         /** ProviderReviewItem */
@@ -1437,6 +1539,18 @@ export interface components {
             completion_code?: string | null;
             /** Reason */
             reason?: string | null;
+        };
+        /** UploadCompleteRequest */
+        UploadCompleteRequest: {
+            /** Object Key */
+            object_key: string;
+        };
+        /** UploadCompleteResponse */
+        UploadCompleteResponse: {
+            /** Object Key */
+            object_key: string;
+            /** Status */
+            status: string;
         };
         /** UploadIntentRequest */
         UploadIntentRequest: {
@@ -1645,6 +1759,61 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_provider_presence_api_v2_provider_presence_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderPresenceResponse"];
+                };
+            };
+        };
+    };
+    update_provider_availability_api_v2_provider_availability_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderAvailabilityRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderPresenceResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1980,6 +2149,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    recover_customer_completion_code_api_v2_bookings__booking_id__completion_code_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompletionCodeResponse"];
                 };
             };
             /** @description Validation Error */
@@ -2430,6 +2632,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    complete_upload_api_v2_uploads_complete_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UploadCompleteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadCompleteResponse"];
                 };
             };
             /** @description Validation Error */

@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Crypto from 'expo-crypto';
 import { useLocalSearchParams } from 'expo-router';
 import { LockKeyhole, SendHorizontal } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 import EmptyState from '../../../src/components/EmptyState';
 import TactilePressable from '../../../src/components/TactilePressable';
@@ -13,23 +13,26 @@ import { createIdempotencyKey, typedApi } from '../../../src/services/api';
 import { ThreadSubscription } from '../../../src/services/websocket';
 import { Theme } from '../../../src/styles/theme';
 import i18n from '../../../src/i18n';
+import { liveQueryOptions, problemDetail } from '../../../src/utils/marketplace';
+
 type Message = components['schemas']['MessageResponse'] & { pending?: boolean };
 
 export default function ThreadScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useSession();
   const cache = useQueryClient();
+  const retrySend = useRef<{ fingerprint: string; clientId: string; key: string } | null>(null);
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
   const [pending, setPending] = useState<Message[]>([]);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
-  const query = useQuery({ queryKey: ['messages', id], queryFn: async () => { const { data, error } = await typedApi.GET('/api/v2/threads/{thread_id}/messages', { params: { path: { thread_id: id } } }); if (error) throw error; return data; } });
+  const query = useQuery({ ...liveQueryOptions, queryKey: ['messages', id], queryFn: async () => { const { data, error } = await typedApi.GET('/api/v2/threads/{thread_id}/messages', { params: { path: { thread_id: id } } }); if (error) throw error; return data; } });
   useEffect(() => { const subscription = new ThreadSubscription(id, () => void cache.invalidateQueries({ queryKey: ['messages', id] }), () => undefined); void subscription.connect().catch(() => undefined); return () => subscription.close(); }, [cache, id]);
   useEffect(() => {
     const unread = (query.data ?? []).filter((message) => message.sender_user_id !== user?.id && !message.read_at).map((message) => message.id);
     if (!unread.length) return;
-    void typedApi.POST('/api/v2/threads/{thread_id}/receipts', { params: { path: { thread_id: id } }, headers: { 'Idempotency-Key': createIdempotencyKey() }, body: { message_ids: unread, receipt: 'read' } }).then(() => cache.invalidateQueries({ queryKey: ['messages', id] }));
+    void typedApi.POST('/api/v2/threads/{thread_id}/receipts', { params: { path: { thread_id: id } }, headers: { 'Idempotency-Key': createIdempotencyKey() }, body: { message_ids: unread, receipt: 'read' } }).then(({ error }) => { if (!error) void cache.invalidateQueries({ queryKey: ['messages', id] }); }).catch(() => undefined);
   }, [cache, id, query.data, user?.id]);
   const send = async () => {
     const text = body.trim();
@@ -37,15 +40,24 @@ export default function ThreadScreen() {
     setSending(true);
     setSendError(null);
     setBody('');
-    const clientId = Crypto.randomUUID();
+    const fingerprint = JSON.stringify([id, text, replyTo?.id ?? null]);
+    if (retrySend.current?.fingerprint !== fingerprint) retrySend.current = { fingerprint, clientId: Crypto.randomUUID(), key: createIdempotencyKey() };
+    const { clientId, key } = retrySend.current;
     const optimistic: Message = { id: clientId, client_message_id: clientId, thread_id: id, sender_user_id: user?.id ?? '', body: text, attachment_key: null, reply_to_message_id: replyTo?.id ?? null, delivered_at: null, read_at: null, created_at: new Date().toISOString(), pending: true };
     setPending((items) => [...items, optimistic]);
     const selectedReply = replyTo;
     setReplyTo(null);
-    const { error } = await typedApi.POST('/api/v2/threads/{thread_id}/messages', { params: { path: { thread_id: id } }, headers: { 'Idempotency-Key': createIdempotencyKey() }, body: { client_message_id: clientId, body: text, reply_to_message_id: selectedReply?.id ?? null } });
-    setPending((items) => items.filter((item) => item.client_message_id !== clientId));
-    if (error) { setBody(text); setReplyTo(selectedReply); setSendError(i18n.t('experience.chat.sendFailed')); } else await cache.invalidateQueries({ queryKey: ['messages', id] });
-    setSending(false);
+    try {
+      const { error } = await typedApi.POST('/api/v2/threads/{thread_id}/messages', { params: { path: { thread_id: id } }, headers: { 'Idempotency-Key': key }, body: { client_message_id: clientId, body: text, reply_to_message_id: selectedReply?.id ?? null } });
+      if (error) throw error;
+      retrySend.current = null;
+    } catch (error) {
+      setBody(text); setReplyTo(selectedReply);
+      setSendError(problemDetail(error, i18n.t('experience.chat.sendFailed')));
+    } finally {
+      setPending((items) => items.filter((item) => item.client_message_id !== clientId));
+      setSending(false); await cache.invalidateQueries({ queryKey: ['messages', id] });
+    }
   };
   if (query.isLoading) return <StateView title={i18n.t('experience.chat.loading')} loading />;
   if (query.isError) return <StateView title={i18n.t('experience.chat.unavailable')} onRetry={() => query.refetch()} />;
@@ -60,7 +72,7 @@ export default function ThreadScreen() {
       {!!sendError && <View accessibilityRole="alert" style={styles.sendError}><Text style={styles.sendErrorText}>{sendError}</Text></View>}
       {replyTo && <View style={styles.replyBar}><View style={{ flex: 1 }}><Text style={styles.replyLabel}>{i18n.t('experience.chat.replying')}</Text><Text numberOfLines={1} style={styles.replyBody}>{replyTo.body}</Text></View><TactilePressable accessibilityRole="button" onPress={() => setReplyTo(null)} style={styles.cancelReply}><Text style={styles.cancelReplyText}>{i18n.t('experience.chat.cancel')}</Text></TactilePressable></View>}
       <View style={styles.composer}>
-        <TextInput accessibilityLabel={i18n.t('experience.chat.message')} value={body} onChangeText={setBody} multiline maxLength={2000} placeholder={i18n.t('experience.chat.placeholder')} placeholderTextColor={Theme.colors.textTertiary} style={styles.input} />
+        <TextInput editable={!sending} accessibilityLabel={i18n.t('experience.chat.message')} value={body} onChangeText={setBody} multiline maxLength={2000} placeholder={i18n.t('experience.chat.placeholder')} placeholderTextColor={Theme.colors.textTertiary} style={styles.input} />
         <TactilePressable accessibilityRole="button" accessibilityLabel={i18n.t('experience.chat.send')} disabled={!body.trim() || sending} style={[styles.send, (!body.trim() || sending) && styles.sendDisabled]} onPress={() => void send()}><SendHorizontal color={Theme.colors.white} size={20} /></TactilePressable>
       </View>
     </KeyboardAvoidingView>

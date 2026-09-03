@@ -16,6 +16,9 @@ import { Theme } from '../../../src/styles/theme';
 import { formatPkr } from '../../../src/utils/format';
 import i18n from '../../../src/i18n';
 
+import TaskPhotos from '../../../src/components/TaskPhotos';
+import { liveQueryOptions, problemDetail } from '../../../src/utils/marketplace';
+
 export default function ProviderJob() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [amount, setAmount] = useState('');
@@ -26,8 +29,9 @@ export default function ProviderJob() {
   const [matchFeedbackReason, setMatchFeedbackReason] = useState('');
   const [reportingMatch, setReportingMatch] = useState(false);
   const [busy, setBusy] = useState(false);
+  const offerRequest = useRef<{ fingerprint: string; key: string } | null>(null);
   const initializedOffer = useRef(false);
-  const query = useQuery({ queryKey: ['booking', id], queryFn: async () => { const { data, error } = await typedApi.GET('/api/v2/bookings/{booking_id}', { params: { path: { booking_id: id } } }); if (error || !data) throw error; return data; } });
+  const query = useQuery({ ...liveQueryOptions, queryKey: ['booking', id], queryFn: async () => { const { data, error } = await typedApi.GET('/api/v2/bookings/{booking_id}', { params: { path: { booking_id: id } } }); if (error || !data) throw error; return data; } });
   const credits = useQuery({ queryKey: ['credit-balance'], queryFn: async () => { const { data, error } = await typedApi.GET('/api/v2/credits'); if (error || !data) throw error; return data; } });
   const quickOffers = useMemo(() => {
     const budget = (query.data?.budget_paisa ?? 0) / 100;
@@ -49,15 +53,17 @@ export default function ProviderJob() {
     }
     setFeedback(null);
     setBusy(true);
-    const { data, error } = await typedApi.POST('/api/v2/bookings/{booking_id}/bids', { params: { path: { booking_id: id } }, headers: { 'Idempotency-Key': createIdempotencyKey() }, body: { amount_paisa: Math.round(parsedAmount * 100), note: note.trim() || null, arrival_minutes: arrivalMinutes } });
-    setBusy(false);
-    if (error || !data) {
-      setFeedback(i18n.t('experience.job.offerFailed'));
-      void trackEvent('bid_sheet', { outcome: 'failed', arrival_minutes: arrivalMinutes, has_note: Boolean(note.trim()) });
-      return;
-    }
-    void trackEvent('bid_sheet', { outcome: 'submitted', arrival_minutes: arrivalMinutes, has_note: Boolean(note.trim()) });
-    router.replace(`/provider/thread/${data.thread_id}` as Href);
+    const body = { amount_paisa: Math.round(parsedAmount * 100), note: note.trim() || null, arrival_minutes: arrivalMinutes };
+    const fingerprint = JSON.stringify([id, body]);
+    if (offerRequest.current?.fingerprint !== fingerprint) offerRequest.current = { fingerprint, key: createIdempotencyKey() };
+    try {
+      const { data, error } = await typedApi.POST('/api/v2/bookings/{booking_id}/bids', { params: { path: { booking_id: id } }, headers: { 'Idempotency-Key': offerRequest.current.key }, body });
+      if (error || !data) throw error;
+      offerRequest.current = null;
+      void trackEvent('bid_sheet', { outcome: 'submitted', arrival_minutes: arrivalMinutes, has_note: Boolean(note.trim()) });
+      router.replace(('/provider/thread/' + data.thread_id) as Href);
+    } catch (error) { setFeedback(problemDetail(error, i18n.t('experience.job.offerFailed'))); }
+    finally { setBusy(false); }
   };
   const reportMatch = async () => {
     if (!matchFeedbackReason) return;
@@ -84,10 +90,11 @@ export default function ProviderJob() {
   return (
     <Screen topInset={false}>
       <FadeIn>
-        <Badge label={i18n.t('experience.job.open')} variant="success" />
+        <Badge label={i18n.t('experience.task.status.' + query.data.status, { defaultValue: query.data.status })} variant="success" />
         <Text style={styles.title}>{query.data.title}</Text>
         <View style={styles.area}><MapPin color={Theme.colors.primary} size={17} /><Text style={styles.areaText}>{query.data.approximate_area}</Text></View>
         <Text style={styles.description}>{query.data.description}</Text>
+        <TaskPhotos images={query.data.images} />
       </FadeIn>
       <FadeIn delay={70}>
         <Card variant="tinted" style={styles.budget}><View><Text style={styles.budgetLabel}>{i18n.t('experience.job.customerBudget')}</Text><Text style={styles.money}>{formatPkr(query.data.budget_paisa)}</Text></View><WalletCards color={Theme.colors.primary} size={27} /></Card>
@@ -108,7 +115,7 @@ export default function ProviderJob() {
           <Input label={i18n.t('experience.job.note')} value={note} onChangeText={setNote} multiline placeholder={i18n.t('experience.job.notePlaceholder')} />
           <View style={styles.chargePanel}><Text style={styles.chargeLabel}>{i18n.t('experience.job.firstCost')}</Text><Text style={styles.chargeValue}>{credits.data?.paid_bids_enabled ? formatPkr(credits.data.bid_fee_paisa) : i18n.t('experience.job.freeLaunch')}</Text><Text style={styles.chargeCopy}>{credits.data?.paid_bids_enabled ? i18n.t('experience.job.revisionsFree') : i18n.t('experience.job.chargeNotice')}</Text></View>
           {!!feedback && <View accessibilityRole="alert" style={styles.feedback}><Text style={styles.feedbackText}>{feedback}</Text></View>}
-          <Button title={i18n.t('experience.job.send', { amount: amount ? formatPkr(Number(amount) * 100) : i18n.t('experience.job.offerWord') })} loading={busy} onPress={() => void submit()} icon={<MessageCircleMore color={Theme.colors.white} size={18} />} />
+          <Button title={i18n.t('experience.job.send', { amount: amount ? formatPkr(Number(amount) * 100) : i18n.t('experience.job.offerWord') })} disabled={query.data.status !== 'open' || query.data.verification_status !== 'verified'} loading={busy} onPress={() => void submit()} icon={<MessageCircleMore color={Theme.colors.white} size={18} />} />
         </Card>
         <View style={styles.privacy}><LockKeyhole color={Theme.colors.textTertiary} size={16} /><Text style={styles.privacyText}>{i18n.t('experience.job.privacy')}</Text></View>
         <Button title={matchFeedbackOpen ? i18n.t('experience.job.closeFeedback') : i18n.t('experience.job.irrelevant')} type="outline" icon={<Flag color={Theme.colors.primary} size={17} />} onPress={() => setMatchFeedbackOpen((value) => !value)} />

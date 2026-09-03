@@ -3,6 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { I18nManager, Platform } from 'react-native';
+import { flowFixes } from './flowFixes';
 
 export type SupportedLocale = 'en' | 'ur-Latn';
 const localeKey = 'apnatask.locale';
@@ -113,6 +114,10 @@ void i18n.use(initReactI18next).init({
   interpolation: { escapeValue: false },
   react: { useSuspense: false },
 });
+
+for (const locale of ['en', 'ur-Latn'] as const) {
+  i18n.addResourceBundle(locale, 'translation', { flow: flowFixes[locale], experience: { task: { timeline: flowFixes[locale].timeline } } }, true, true);
+}
 
 if (Platform.OS !== 'web') {
   void SecureStore.getItemAsync(localeKey).then((saved) => {

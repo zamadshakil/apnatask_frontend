@@ -1,7 +1,7 @@
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { Platform } from 'react-native';
-import { typedApi } from './api';
+import { createIdempotencyKey, typedApi } from './api';
 
 export interface PreparedImage { uri: string; size: number; contentType: 'image/jpeg'; extension: 'jpg' }
 type UploadIntent = {
@@ -38,7 +38,7 @@ export async function uploadImage(image: PreparedImage, purpose: 'task' | 'kyc' 
       body: file,
     });
     if (!response.ok) throw new Error('Image upload failed. No task was posted; please retry.');
-    return intent.object_key;
+    return completeUpload(intent.object_key);
   }
   const form = new FormData();
   Object.entries(intent.upload.fields).forEach(([key, value]) => form.append(key, value));
@@ -46,5 +46,13 @@ export async function uploadImage(image: PreparedImage, purpose: 'task' | 'kyc' 
   else form.append('file', { uri: image.uri, name: 'image.jpg', type: image.contentType } as unknown as Blob);
   const response = await fetch(intent.upload.url, { method: 'POST', body: form });
   if (!response.ok) throw new Error('Image upload failed. No task was posted; please retry.');
-  return intent.object_key;
+  return completeUpload(intent.object_key);
+}
+
+async function completeUpload(objectKey: string): Promise<string> {
+  const { data, error } = await typedApi.POST('/api/v2/uploads/complete', {
+    headers: { 'Idempotency-Key': createIdempotencyKey() }, body: { object_key: objectKey },
+  });
+  if (error || !data) throw new Error('Photo validation failed. No task was posted; retry with a valid photo.');
+  return data.object_key;
 }

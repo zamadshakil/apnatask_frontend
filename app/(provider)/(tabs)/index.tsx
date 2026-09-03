@@ -13,11 +13,13 @@ import EmptyState from '../../../src/components/EmptyState';
 import { FadeIn } from '../../../src/components/Motion';
 import TactilePressable from '../../../src/components/TactilePressable';
 import { Screen, StateView } from '../../../src/components/Screen';
-import { typedApi } from '../../../src/services/api';
+import { createIdempotencyKey, typedApi } from '../../../src/services/api';
 import { trackEvent } from '../../../src/services/analytics';
 import { Theme } from '../../../src/styles/theme';
 import { formatPkr } from '../../../src/utils/format';
 import i18n from '../../../src/i18n';
+
+import { liveQueryOptions, problemDetail } from '../../../src/utils/marketplace';
 
 type Category = { id: string; slug: string; name_en: string; name_ur: string };
 type Job = { id: string; title: string; description: string; budget_paisa: number | null; approximate_area: string; approximate_latitude: number; approximate_longitude: number; distance_km: number; expires_at: string; score: number; match_reason_code: string; match_reason: string; matching_model: string; active_bid_count: number };
@@ -36,12 +38,19 @@ function categoryLabel(category: Category) {
 export default function JobsScreen() {
   const [categoryId, setCategoryId] = useState('');
   const [radiusKm, setRadiusKm] = useState(12);
-  const [available, setAvailable] = useState(true);
+  const [available, setAvailable] = useState(false);
   const [updatingPresence, setUpdatingPresence] = useState(false);
   const [presenceMessage, setPresenceMessage] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
   const [selectedJobId, setSelectedJobId] = useState<string | undefined>();
 
+  const presence = useQuery({ ...liveQueryOptions, queryKey: ['provider-presence'], queryFn: async () => {
+    const { data, error } = await typedApi.GET('/api/v2/provider/presence'); if (error || !data) throw error; return data;
+  } });
+  useEffect(() => {
+    if (presence.data) { setAvailable(presence.data.is_available); setRadiusKm(presence.data.service_radius_km); }
+  }, [presence.data]);
+  const hasLocation = presence.data?.latitude != null && presence.data?.longitude != null;
   const categories = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
@@ -51,6 +60,8 @@ export default function JobsScreen() {
     },
   });
   const query = useQuery({
+    ...liveQueryOptions,
+    enabled: hasLocation && available,
     queryKey: ['provider-jobs', categoryId, radiusKm],
     queryFn: async () => {
       const params: { category_id?: string; radius_km?: number } = {};
@@ -61,62 +72,43 @@ export default function JobsScreen() {
       return data as unknown as JobsResponse;
     },
   });
-  const jobs = useMemo(() => query.data?.items ?? [], [query.data]);
+  const jobs = useMemo(() => available && hasLocation ? query.data?.items ?? [] : [], [query.data, available, hasLocation]);
   useEffect(() => {
     if (!jobs.length) return setSelectedJobId(undefined);
     if (!selectedJobId || !jobs.some((job) => job.id === selectedJobId)) setSelectedJobId(jobs[0].id);
   }, [jobs, selectedJobId]);
   const selectedJob = jobs.find((job) => job.id === selectedJobId);
   const approvedCategories = categories.data?.filter((category) => !query.data || query.data.approved_category_ids.includes(category.id)) ?? [];
-  const center = query.data?.search_origin ?? { latitude: 31.5204, longitude: 74.3587 };
-  const updatePresence = async (nextAvailable: boolean) => {
-    setUpdatingPresence(true);
-    setPresenceMessage(null);
+  const center = hasLocation ? { latitude: presence.data!.latitude!, longitude: presence.data!.longitude! } : { latitude: 30.3753, longitude: 69.3451 };
+  const updatePresence = async (nextAvailable: boolean, forceLocation = false, nextRadius = radiusKm) => {
+    if (updatingPresence) return;
+    setUpdatingPresence(true); setPresenceMessage(null);
     try {
-      const permission = await Location.requestForegroundPermissionsAsync();
-      if (!permission.granted) {
-        setAvailable(false);
-        setPresenceMessage(i18n.t('experience.provider.locationRequired'));
-        return;
+      if (forceLocation || (nextAvailable && !hasLocation)) {
+        const permission = await Location.requestForegroundPermissionsAsync();
+        if (!permission.granted) throw new Error('location');
+        const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        const { error } = await typedApi.PUT('/api/v2/provider/location', { body: {
+          latitude: position.coords.latitude, longitude: position.coords.longitude,
+          accuracy_m: position.coords.accuracy ?? null, captured_at: new Date(position.timestamp).toISOString(),
+          is_available: nextAvailable, service_radius_km: nextRadius,
+        } });
+        if (error) throw error;
+      } else {
+        const { error } = await typedApi.PUT('/api/v2/provider/availability', {
+          headers: { 'Idempotency-Key': createIdempotencyKey() },
+          body: { is_available: nextAvailable, service_radius_km: nextRadius },
+        });
+        if (error) throw error;
       }
-      const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      const { error } = await typedApi.PUT('/api/v2/provider/location', { body: {
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-        accuracy_m: position.coords.accuracy ?? null,
-        captured_at: new Date(position.timestamp).toISOString(),
-        is_available: nextAvailable,
-        service_radius_km: radiusKm,
-      } });
-      if (error) throw error;
-      setAvailable(nextAvailable);
+      setAvailable(nextAvailable); setRadiusKm(nextRadius);
       setPresenceMessage(nextAvailable ? i18n.t('experience.provider.visible') : i18n.t('experience.provider.pausedMessage'));
-      await query.refetch();
-    } catch {
-      setPresenceMessage(i18n.t('experience.provider.locationFailed'));
-    } finally {
-      setUpdatingPresence(false);
-    }
+      await presence.refetch();
+    } catch (error) {
+      setPresenceMessage(problemDetail(error, i18n.t('experience.provider.locationFailed')));
+      await presence.refetch();
+    } finally { setUpdatingPresence(false); }
   };
-  useEffect(() => {
-    if (!available) return;
-    const heartbeat = async () => {
-      const permission = await Location.getForegroundPermissionsAsync();
-      if (!permission.granted) return;
-      const position = await Location.getLastKnownPositionAsync({ maxAge: 180_000, requiredAccuracy: 2_000 });
-      if (!position) return;
-      await typedApi.PUT('/api/v2/provider/location', { body: {
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-        accuracy_m: position.coords.accuracy ?? null,
-        captured_at: new Date(position.timestamp).toISOString(),
-        is_available: true,
-        service_radius_km: radiusKm,
-      } });
-    };
-    const interval = setInterval(() => void heartbeat(), 120_000);
-    return () => clearInterval(interval);
-  }, [available, radiusKm]);
   return (
     <Screen>
       <FadeIn>
@@ -125,13 +117,15 @@ export default function JobsScreen() {
         <Text style={styles.subtitle}>{i18n.t('experience.provider.subtitle')}</Text>
       </FadeIn>
       <Card variant="glass" style={styles.presenceCard}>
-        <View style={styles.presenceRow}><View style={{ flex: 1 }}><Text style={styles.presenceTitle}>{i18n.t('experience.provider.availableForWork')}</Text><Text style={styles.presenceCopy}>{i18n.t('experience.provider.presenceCopy')}</Text></View><Switch accessibilityLabel={i18n.t('experience.provider.availabilityLabel')} value={available} disabled={updatingPresence} onValueChange={(value) => void updatePresence(value)} trackColor={{ false: Theme.colors.border, true: Theme.colors.primaryLight }} /></View>
-        <Button title={updatingPresence ? i18n.t('experience.provider.updatingLocation') : i18n.t('experience.provider.updateLocation')} type="outline" icon={<LocateFixed size={17} color={Theme.colors.primary} />} loading={updatingPresence} onPress={() => void updatePresence(available)} />
+        {!presence.data && <StateView title={i18n.t('flow.checkingPresence')} loading={presence.isLoading} onRetry={() => void presence.refetch()} />}
+        {presence.data && !hasLocation && <Text style={styles.presenceCopy}>{i18n.t('flow.locationUnknown')}</Text>}
+        <View style={styles.presenceRow}><View style={{ flex: 1 }}><Text style={styles.presenceTitle}>{i18n.t('experience.provider.availableForWork')}</Text><Text style={styles.presenceCopy}>{i18n.t('experience.provider.presenceCopy')}</Text></View><Switch accessibilityLabel={i18n.t('experience.provider.availabilityLabel')} value={available} disabled={updatingPresence || !presence.data} onValueChange={(value) => void updatePresence(value)} trackColor={{ false: Theme.colors.border, true: Theme.colors.primaryLight }} /></View>
+        <Button title={updatingPresence ? i18n.t('experience.provider.updatingLocation') : i18n.t('experience.provider.updateLocation')} type="outline" icon={<LocateFixed size={17} color={Theme.colors.primary} />} loading={updatingPresence} onPress={() => void updatePresence(available, true)} />
         {!!presenceMessage && <Text accessibilityRole="alert" style={styles.presenceMessage}>{presenceMessage}</Text>}
       </Card>
       <View style={styles.filters}>
         <Text style={styles.filterLabel}>{i18n.t('experience.provider.radius')}</Text>
-        <View style={styles.radiusRow}>{[5, 12, 25, 50].map((value) => <TactilePressable key={value} accessibilityRole="button" accessibilityLabel={i18n.t('experience.provider.radiusA11y', { count: value })} accessibilityState={{ selected: radiusKm === value }} onPress={() => { setRadiusKm(value); void trackEvent('provider_feed', { outcome: 'radius_changed', radius_km: value, result_count: jobs.length }); }} style={[styles.radiusChip, radiusKm === value && styles.radiusChipActive]}><Text style={[styles.radiusText, radiusKm === value && styles.radiusTextActive]}>{value} km</Text></TactilePressable>)}</View>
+        <View style={styles.radiusRow}>{[5, 12, 25, 50].map((value) => <TactilePressable key={value} accessibilityRole="button" accessibilityLabel={i18n.t('experience.provider.radiusA11y', { count: value })} accessibilityState={{ selected: radiusKm === value }} onPress={() => { void updatePresence(available, false, value); void trackEvent('provider_feed', { outcome: 'radius_changed', radius_km: value, result_count: jobs.length }); }} style={[styles.radiusChip, radiusKm === value && styles.radiusChipActive]}><Text style={[styles.radiusText, radiusKm === value && styles.radiusTextActive]}>{value} km</Text></TactilePressable>)}</View>
         <Text style={styles.filterLabel}>{i18n.t('experience.provider.approvedServices')}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsWrap}>
           <TactilePressable accessibilityRole="button" accessibilityLabel={i18n.t('experience.provider.allA11y')} accessibilityState={{ selected: !categoryId }} onPress={() => setCategoryId('')} style={styles.chipPressable}>
@@ -161,13 +155,13 @@ export default function JobsScreen() {
               center={center}
               height={430}
               markers={[
-                { id: '__provider_origin__', ...center, title: i18n.t('experience.provider.origin'), variant: 'origin' },
+                ...(hasLocation ? [{ id: '__provider_origin__', ...center, title: i18n.t('experience.provider.origin'), variant: 'origin' as const }] : []),
                 ...jobs.map((job) => ({ id: job.id, latitude: job.approximate_latitude, longitude: job.approximate_longitude, title: `${job.title}, ${job.approximate_area}`, label: compactBudget(job.budget_paisa), variant: 'task' as const })),
               ]}
               mode="markers"
               onMarkerPress={(id) => id !== '__provider_origin__' && setSelectedJobId(id)}
               selectedMarkerId={selectedJobId}
-              zoom={radiusKm > 25 ? 9 : radiusKm > 12 ? 10 : 11.5}
+              zoom={!hasLocation ? 5 : radiusKm > 25 ? 9 : radiusKm > 12 ? 10 : 11.5}
             />
             <Text style={styles.privacyNote}>{i18n.t('experience.provider.privacy')}</Text>
           </View>
@@ -183,7 +177,7 @@ export default function JobsScreen() {
           )}
           {query.isLoading && <StateView title={i18n.t('experience.provider.finding')} loading />}
           {query.isError && <Card variant="tinted" style={styles.recoveryCard}><EmptyState icon={LocateFixed} title={i18n.t('experience.provider.noFeed')} detail={i18n.t('experience.provider.noFeedDetail')} /><Button title={i18n.t('experience.provider.retryLocation')} onPress={() => void updatePresence(true)} /></Card>}
-          {!query.isLoading && !query.isError && !jobs.length && <Card variant="tinted" style={styles.recoveryCard}><EmptyState icon={BriefcaseBusiness} title={i18n.t('experience.provider.noMatches')} detail={i18n.t('experience.provider.noMatchesDetail')} /><View style={styles.recoveryActions}><Button title={i18n.t('experience.provider.expand')} type="outline" onPress={() => setRadiusKm(25)} style={styles.actionFlex} /><Button title={i18n.t('experience.provider.refresh')} onPress={() => void query.refetch()} style={styles.actionFlex} /></View></Card>}
+          {!query.isLoading && !query.isError && !jobs.length && <Card variant="tinted" style={styles.recoveryCard}><EmptyState icon={BriefcaseBusiness} title={i18n.t('experience.provider.noMatches')} detail={i18n.t('experience.provider.noMatchesDetail')} /><View style={styles.recoveryActions}><Button title={i18n.t('experience.provider.expand')} type="outline" onPress={() => void updatePresence(available, false, 25)} style={styles.actionFlex} /><Button title={i18n.t('experience.provider.refresh')} onPress={() => void query.refetch()} style={styles.actionFlex} /></View></Card>}
         </FadeIn>
       ) : jobs.length ? jobs.map((job, index) => (
         <FadeIn key={job.id} delay={60 + index * 45}>
