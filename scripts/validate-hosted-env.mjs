@@ -34,5 +34,8 @@ if (variant === 'alpha' && process.env.EXPO_PUBLIC_AUTH_MODE !== 'email') {
 if (variant === 'production' && process.env.EXPO_PUBLIC_AUTH_MODE !== 'phone') {
   throw new Error('Production must use phone authentication');
 }
+if (variant !== 'alpha' && process.env.EXPO_PUBLIC_ALPHA_GUEST_ACCESS === 'true') {
+  throw new Error('EXPO_PUBLIC_ALPHA_GUEST_ACCESS is only valid for alpha builds');
+}
 
 console.log(`Validated required public configuration for the ${variant} web build.`);

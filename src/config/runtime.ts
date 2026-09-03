@@ -12,6 +12,7 @@ const isProduction = appVariant === 'production';
 const isHosted = appVariant !== 'development';
 const localAuthToken = process.env.EXPO_PUBLIC_LOCAL_AUTH_TOKEN?.trim() || undefined;
 const authMode = (process.env.EXPO_PUBLIC_AUTH_MODE?.trim() || 'phone') as AuthMode;
+const alphaGuestAccessEnabled = process.env.EXPO_PUBLIC_ALPHA_GUEST_ACCESS === 'true';
 
 if (isHosted && localAuthToken) {
   throw new Error('EXPO_PUBLIC_LOCAL_AUTH_TOKEN is forbidden in hosted builds');
@@ -24,6 +25,9 @@ if (appVariant === 'alpha' && authMode !== 'email') {
 }
 if (isProduction && authMode !== 'phone') {
   throw new Error('Production must use phone authentication');
+}
+if (appVariant !== 'alpha' && alphaGuestAccessEnabled) {
+  throw new Error('EXPO_PUBLIC_ALPHA_GUEST_ACCESS is only valid for alpha builds');
 }
 
 function requiredPublicValue(name: string, value: string | undefined, fallback: string): string {
@@ -77,6 +81,7 @@ export const runtime = Object.freeze({
   isProduction,
   isHosted,
   authMode,
+  alphaGuestAccessEnabled,
   apiBaseUrl,
   websocketBaseUrl,
   supabaseUrl: requiredPublicValue(

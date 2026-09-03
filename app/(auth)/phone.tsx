@@ -25,6 +25,7 @@ export default function PhoneAuthScreen() {
   const intent = parseEntryIntent(params.intent);
   const { t, i18n } = useTranslation();
   const emailMode = runtime.authMode === 'email';
+  const guestMode = runtime.alphaGuestAccessEnabled;
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<{ tone: 'error' | 'success'; message: string } | null>(null);
@@ -90,6 +91,20 @@ export default function PhoneAuthScreen() {
     ? emailForm.handleSubmit(({ email, otp }) => complete(email.trim().toLowerCase(), otp))
     : phoneForm.handleSubmit(({ phone, otp }) => complete(normalizePakistanPhone(phone), otp));
 
+  const enterGuestAlpha = async () => {
+    setBusy(true);
+    setFeedback(null);
+    try {
+      const { error } = await supabase.auth.signInAnonymously();
+      if (error) throw error;
+      router.replace({ pathname: '/', params: { intent } });
+    } catch {
+      setFeedback({ tone: 'error', message: t('auth.guestUnavailable') });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <Screen style={styles.screen}>
       <View style={styles.topbar}>
@@ -99,11 +114,11 @@ export default function PhoneAuthScreen() {
       <FadeIn><View style={styles.hero}>
         <Text style={styles.eyebrow}>{t('auth.title')}</Text>
         <Text style={styles.title}>{t('auth.hero')}</Text>
-        <Text style={styles.copy}>{t(emailMode ? 'auth.copyEmail' : 'auth.copy')}</Text>
+        <Text style={styles.copy}>{t(guestMode ? 'auth.copyGuest' : emailMode ? 'auth.copyEmail' : 'auth.copy')}</Text>
       </View></FadeIn>
       <FadeIn delay={80}><Card elevation="md" style={styles.form}>
         {runtime.localAuthToken && <View style={styles.localBanner}><View style={styles.localIcon}><Smartphone color={Theme.colors.primary} size={19} /></View><Text style={styles.localHint}>{t('auth.localHint')}</Text></View>}
-        {emailMode ? <Controller control={emailForm.control} name="email" render={({ field, fieldState }) => (
+        {guestMode ? <View style={styles.localBanner}><View style={styles.localIcon}><Smartphone color={Theme.colors.primary} size={19} /></View><Text style={styles.localHint}>{t('auth.guestHint')}</Text></View> : emailMode ? <Controller control={emailForm.control} name="email" render={({ field, fieldState }) => (
           <Input label={t('auth.email')} keyboardType="email-address" autoCapitalize="none" autoComplete="email" placeholder={t('auth.emailPlaceholder')} editable={!sentTo} value={field.value} onChangeText={field.onChange} error={fieldState.error?.message} icon={<Mail size={18} color={Theme.colors.textTertiary} />} />
         )} /> : <Controller control={phoneForm.control} name="phone" render={({ field, fieldState }) => (
           <Input label={t('auth.phone')} keyboardType="phone-pad" placeholder={t('auth.phonePlaceholder')} editable={!sentTo} value={field.value} onChangeText={field.onChange} error={fieldState.error?.message} />
@@ -120,7 +135,7 @@ export default function PhoneAuthScreen() {
             {feedback.message}
           </Text>
         )}
-        {(!sentTo || !emailMode) && <Button title={runtime.localAuthToken ? t('auth.openPreview') : sentTo ? t('auth.verify') : t(emailMode ? 'auth.sendEmail' : 'auth.sendFull')} onPress={submit} loading={busy} size="lg" />}
+        {guestMode ? <Button title={t('auth.enterAlpha')} onPress={() => void enterGuestAlpha()} loading={busy} size="lg" /> : (!sentTo || !emailMode) && <Button title={runtime.localAuthToken ? t('auth.openPreview') : sentTo ? t('auth.verify') : t(emailMode ? 'auth.sendEmail' : 'auth.sendFull')} onPress={submit} loading={busy} size="lg" />}
         {sentTo && <Button title={t('auth.different')} onPress={() => { setSentTo(null); setFeedback(null); }} type="outline" />}
         <View style={styles.termsRow}><ShieldCheck color={Theme.colors.textTertiary} size={15} /><Text style={styles.terms}>{t('auth.terms')}</Text></View>
       </Card></FadeIn>
