@@ -86,9 +86,9 @@ export default function ActiveTaskDock({ role, overlap = false, floating = false
 
 const webDepth = Platform.OS === 'web' ? ({ boxShadow: Theme.webShadows.xl } as ViewStyle) : Theme.shadows.xl;
 const styles = StyleSheet.create({
-  shell: { zIndex: 4, marginBottom: Theme.spacing.md },
+  shell: { zIndex: 4, marginBottom: Theme.spacing.md, paddingHorizontal: Theme.spacing.lg, alignItems: 'center' },
   overlap: { marginTop: -18 },
-  frame: { width: '100%' },
+  frame: { width: '100%', maxWidth: 720 },
   floatingShell: { position: 'absolute', left: 0, right: 0, bottom: 88, zIndex: 80, elevation: 20, marginBottom: 0, paddingHorizontal: Theme.spacing.lg, alignItems: 'center' },
   floatingFrame: { width: '100%', maxWidth: 720 },
   card: { backgroundColor: Theme.colors.surface, borderRadius: Theme.radius.xl, borderWidth: 1, borderColor: Theme.colors.borderLight, padding: Theme.spacing.lg, ...webDepth },

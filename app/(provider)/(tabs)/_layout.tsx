@@ -13,12 +13,12 @@ export default function ProviderTabs() {
   const { user, loading } = useSession();
   if (loading) return <StateView title={i18n.t('experience.provider.finding')} loading />;
   if (!user?.capabilities.includes('provider')) return <Redirect href="/(customer)/(tabs)/account" />;
-  return <View style={styles.root}><Tabs tabBar={(props) => <GlassTabBar {...props} />} screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: Theme.colors.background }, tabBarHideOnKeyboard: true }}>
+  return <View style={styles.root}><Tabs tabBar={(props) => <View><ActiveTaskDock role="provider" /><GlassTabBar {...props} /></View>} screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: Theme.colors.background }, tabBarHideOnKeyboard: true }}>
       <Tabs.Screen name="index" options={{ title: i18n.t('tabs.jobs'), tabBarIcon: ({ color }) => <BriefcaseBusiness color={color} /> }} />
       <Tabs.Screen name="assigned" options={{ title: i18n.t('experience.assigned.title'), tabBarIcon: ({ color }) => <ClipboardCheck color={color} /> }} />
       <Tabs.Screen name="credits" options={{ title: i18n.t('tabs.credits'), tabBarIcon: ({ color }) => <Coins color={color} /> }} />
       <Tabs.Screen name="account" options={{ title: i18n.t('tabs.account'), tabBarIcon: ({ color }) => <UserRound color={color} /> }} />
-    </Tabs><ActiveTaskDock role="provider" floating /></View>;
+    </Tabs></View>;
 }
 
 const styles = StyleSheet.create({ root: { flex: 1 } });
