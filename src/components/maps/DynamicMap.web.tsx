@@ -55,6 +55,18 @@ export default function DynamicMap({
         },
       });
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+      // Some community tile styles reference optional POI sprites that are not
+      // present in every regional sprite sheet. Supplying a transparent pixel
+      // keeps labels and the interactive map usable without noisy console
+      // warnings or repeated missing-image lookups.
+      map.on('styleimagemissing', (event) => {
+        if (map.hasImage(event.id)) return;
+        map.addImage(event.id, {
+          width: 1,
+          height: 1,
+          data: new Uint8Array([0, 0, 0, 0]),
+        });
+      });
       map.on('load', () => setReady(true));
       // styledata arrives before all visible tiles and prevents a slow or
       // unavailable label glyph from leaving an opaque loading layer forever.
